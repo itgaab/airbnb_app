@@ -45,3 +45,6 @@ Abre automaticamente em `http://localhost:8501`.
   libgdal-dev
   ```
 - **Se quiser trocar os dados no futuro** (nova coleta, mais bairros etc.): é só substituir os arquivos dentro de `dados/` mantendo os mesmos nomes de coluna usados no `app.py`.
+
+
+Link do app: https://airbnbapp-rj.streamlit.app/
