@@ -55,91 +55,9 @@ except ImportError:
 
 st.set_page_config(page_title="Airbnb Rio de Janeiro  Análise Espacial", layout="wide")
 
-# ---------------------------------------------------------------------------
-# Estilo visual — fundo azul marinho com cards em branco
-# ---------------------------------------------------------------------------
-st.markdown("""
-<style>
-[data-testid="stAppViewContainer"] {
-    background-color: #1e3d59;
-}
-[data-testid="stHeader"] {
-    background-color: rgba(0,0,0,0);
-}
-[data-testid="stSidebar"] {
-    background-color: #16304a;
-}
-h1, h2, h3, h4, h5, p, label, span, .stMarkdown, .stCaption {
-    color: #ffffff !important;
-}
-div[data-testid="stMetric"] {
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 12px 16px;
-}
-div[data-testid="stMetric"] label, div[data-testid="stMetric"] div {
-    color: #1e3d59 !important;
-}
-.stExpander, div[data-testid="stExpander"] details {
-    background-color: #ffffff;
-    border-radius: 8px;
-}
-.stExpander p, .stExpander li, .stExpander code {
-    color: #1e3d59 !important;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] {
-    background-color: #ffffff;
-    border-radius: 8px;
-    padding: 8px;
-}
-div[data-testid="stVerticalBlockBorderWrapper"] p,
-div[data-testid="stVerticalBlockBorderWrapper"] label,
-div[data-testid="stVerticalBlockBorderWrapper"] span {
-    color: #1e3d59 !important;
-}
-.stTabs [data-baseweb="tab-list"] {
-    background-color: #16304a;
-    border-radius: 8px;
-    padding: 4px;
-}
-.stTabs [data-baseweb="tab"] {
-    color: #ffffff;
-}
-.stTabs [aria-selected="true"] {
-    background-color: #ff6e40 !important;
-    border-radius: 6px;
-    color: #ffffff !important;
-}
-.stDataFrame, div[data-testid="stTable"] {
-    background-color: #ffffff;
-    border-radius: 8px;
-}
-.stAlert {
-    border-radius: 8px;
-}
-</style>
-""", unsafe_allow_html=True)
-
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
-
-
-# ---------------------------------------------------------------------------
-# Tema visual dos gráficos Plotly — fundo transparente + texto branco,
-# pra combinar com o fundo azul marinho do app (evita "ilhas brancas").
-# ---------------------------------------------------------------------------
-def aplicar_tema_grafico(fig):
-    """Deixa o fundo do gráfico transparente e o texto legível sobre o fundo navy."""
-    fig.update_layout(
-        paper_bgcolor="rgba(0,0,0,0)",
-        plot_bgcolor="rgba(0,0,0,0)",
-        font_color="#ffffff",
-        legend=dict(font=dict(color="#ffffff")),
-        xaxis=dict(gridcolor="rgba(255,255,255,0.15)", zerolinecolor="rgba(255,255,255,0.3)"),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.15)", zerolinecolor="rgba(255,255,255,0.3)"),
-    )
-    return fig
 
 
 # ---------------------------------------------------------------------------
@@ -553,6 +471,9 @@ def prever_investimento(modelos: dict, dados_imovel: dict, mes_referencia: str =
     return resultado
 
 
+
+
+
 # ---------------------------------------------------------------------------
 # Perfis predefinidos do simulador (Econômico / Padrão / Luxo)
 # Calculados a partir dos dados reais (tercis de `score_luxo`), não são valores
@@ -567,6 +488,11 @@ CAMPOS_CAT_PERFIL = [
     "tipo_quarto", "tipo_propriedade", "tipo_hospedagem", "e_superanfitriao", "reserva_instantanea",
 ]
 CAMPOS_BINARIOS_PERFIL = ["tem_banheiro_privativo", "flexibilidade_estadia"]
+# Campos cujo widget no formulário é int (min_value/max_value inteiros) — a mediana
+# precisa ser arredondada e convertida, senão o Streamlit reclama de tipo (int vs float).
+# `quartos`/`camas` entraram aqui porque não faz sentido ter "2,5 quartos" — só
+# `banheiros` fica de fora, pois meio-banheiro (lavabo, sem chuveiro) é uma categoria
+# real nos dados do Airbnb.
 CAMPOS_INT_PERFIL = {
     "capacidade_hospedes", "quartos", "camas", "qtd_comodidades", "noites_minimas",
     "noites_maximas", "total_anuncios_anfitriao", "numero_avaliacoes",
@@ -607,6 +533,10 @@ def calcular_perfis_predefinidos(df: pd.DataFrame) -> dict:
 
 # ---------------------------------------------------------------------------
 # Multicolinearidade (VIF) das variáveis numéricas do modelo de preço
+# score_luxo, nota_composta e várias amenities tendem a ser correlacionadas —
+# VIF alto (regra prática: > 5 ou > 10) indica que a variável carrega
+# informação redundante com as demais, o que infla o erro-padrão dos
+# coeficientes (mais relevante para modelos lineares/Ridge/Lasso que para RF).
 # ---------------------------------------------------------------------------
 @st.cache_data(show_spinner=False)
 def calcular_vif_preco(df: pd.DataFrame, _modelos: dict) -> pd.DataFrame:
@@ -636,6 +566,8 @@ def calcular_vif_preco(df: pd.DataFrame, _modelos: dict) -> pd.DataFrame:
 
 # ---------------------------------------------------------------------------
 # Baseline simples (média de preço por bairro) para comparar com o modelo real
+# Mostra o ganho de usar Ridge/Lasso/RF em vez de simplesmente prever a média
+# histórica do bairro — argumento direto de "o modelo agrega valor" pra banca.
 # ---------------------------------------------------------------------------
 @st.cache_data(show_spinner=False)
 def comparar_modelo_com_baseline(df: pd.DataFrame, _modelos: dict) -> dict:
@@ -890,7 +822,7 @@ with aba_sazonalidade:
                                      text="Alta temporada", showarrow=True, arrowhead=2, yshift=15)
             fig_ocup.add_annotation(x=mes_baixa["mes_nome"], y=mes_baixa["taxa_ocupacao"],
                                      text="Baixa temporada", showarrow=True, arrowhead=2, yshift=-15)
-            st.plotly_chart(aplicar_tema_grafico(fig_ocup), width='stretch')
+            st.plotly_chart(fig_ocup, width='stretch')
 
         with col2:
             preco_mes = temporal.groupby("mes_coleta")["price"].mean().reset_index()
@@ -900,7 +832,7 @@ with aba_sazonalidade:
             fig_preco = px.bar(preco_mes, x="mes_nome", y="price",
                                 title="Preço médio por mês (coletas disponíveis)")
             fig_preco.update_layout(xaxis_title="Mês", yaxis_title="Preço médio (R$)")
-            st.plotly_chart(aplicar_tema_grafico(fig_preco), width='stretch')
+            st.plotly_chart(fig_preco, width='stretch')
 
         st.info(
             f"📈 **Melhor mês pra alugar/investir (maior ocupação): {mes_pico['mes_nome']}** "
@@ -978,7 +910,7 @@ with aba_evolucao:
                                        xaxis_title="Coleta", legend=dict(orientation="h", y=-0.2))
                 fig_evo.update_yaxes(title_text="Preço (R$)", secondary_y=False)
                 fig_evo.update_yaxes(title_text="Nº de anúncios", secondary_y=True)
-                st.plotly_chart(aplicar_tema_grafico(fig_evo), width="stretch")
+                st.plotly_chart(fig_evo, width="stretch")
 
             with col_evo2:
                 fig_var = px.line(
@@ -988,7 +920,7 @@ with aba_evolucao:
                 fig_var.add_hline(y=0, line_dash="dot", line_color="gray")
                 fig_var.update_layout(xaxis_title="Coleta", yaxis_title="Variação acumulada (%)")
                 fig_var.update_traces(line_color="#9B59B6")
-                st.plotly_chart(aplicar_tema_grafico(fig_var), width="stretch")
+                st.plotly_chart(fig_var, width="stretch")
                 st.caption("Valores nominais, sem correção pela inflação (IPCA).")
 
             st.dataframe(
@@ -1039,7 +971,7 @@ with aba_evolucao:
                     )
                     fig_bairro.update_layout(xaxis_title="Coleta", yaxis_title="Preço médio (R$)",
                                               legend_title="Bairro")
-                    st.plotly_chart(aplicar_tema_grafico(fig_bairro), width="stretch")
+                    st.plotly_chart(fig_bairro, width="stretch")
                 else:
                     st.info("Selecione pelo menos um bairro para ver o gráfico.")
 
@@ -1253,6 +1185,7 @@ with aba_simulador:
                         f"ocupação R² = {resultado['r2_ocupacao']:.2f} "
                         "(quanto mais próximo de 1, melhor o modelo explica os dados)."
                     )
+
 
                 if mes_para_calculo:
                     st.caption(
@@ -1498,6 +1431,10 @@ with aba_recomendacao:
 
 # ---------------------------------------------------------------------------
 # ABA 6 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
+# Esta aba já era declarada em st.tabs() mas não tinha bloco `with aba_avaliacoes:`
+# — ficava vazia. Se o dataset tiver sub-notas por aspecto (limpeza, comunicação,
+# localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
+# indicadores de engajamento já calculados em criar_variaveis_avaliacoes().
 # ---------------------------------------------------------------------------
 with aba_avaliacoes:
     st.subheader("📝 Pontos fortes e fracos das hospedagens")
@@ -1525,6 +1462,7 @@ with aba_avaliacoes:
     subnotas_disponiveis = {c: r for c, r in CANDIDATOS_SUBNOTAS.items() if c in df.columns}
 
     if subnotas_disponiveis:
+        # --- visão geral: qual aspecto puxa a média pra baixo/cima em toda a cidade
         medias_gerais = (
             df[list(subnotas_disponiveis)].mean().rename(index=subnotas_disponiveis).sort_values()
         )
@@ -1535,7 +1473,7 @@ with aba_avaliacoes:
             color=medias_gerais.values, color_continuous_scale="RdYlGn",
         )
         fig_geral.update_layout(showlegend=False, coloraxis_showscale=False)
-        st.plotly_chart(aplicar_tema_grafico(fig_geral), use_container_width=True)
+        st.plotly_chart(fig_geral, use_container_width=True)
         st.caption(
             f"🔴 Ponto fraco geral: **{medias_gerais.index[0]}** (menor média) · "
             f"🟢 Ponto forte geral: **{medias_gerais.index[-1]}** (maior média)."
@@ -1569,7 +1507,7 @@ with aba_avaliacoes:
                 color=delta.values, color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
             )
             fig_delta.update_layout(showlegend=False, coloraxis_showscale=False)
-            st.plotly_chart(aplicar_tema_grafico(fig_delta), use_container_width=True)
+            st.plotly_chart(fig_delta, use_container_width=True)
 
             pontos_fracos = delta[delta < -0.05].index.tolist()
             pontos_fortes = delta[delta > 0.05].index.tolist()
@@ -1617,7 +1555,7 @@ with aba_avaliacoes:
                 title="Quantidade de anúncios por faixa de qualidade percebida",
                 color="qualidade_percebida",
             )
-            st.plotly_chart(aplicar_tema_grafico(fig_qual), use_container_width=True)
+            st.plotly_chart(fig_qual, use_container_width=True)
 
         st.divider()
         st.markdown("##### Bairros: destaques e pontos de atenção")
@@ -1661,7 +1599,7 @@ with aba_avaliacoes:
                 title="Nota composta x frequência de avaliações",
                 labels={"avaliacoes_por_mes": "Avaliações por mês", "nota_composta": "Nota composta"},
             )
-            st.plotly_chart(aplicar_tema_grafico(fig_disp), use_container_width=True)
+            st.plotly_chart(fig_disp, use_container_width=True)
             st.caption(
                 "Cantos úteis pra ler: **canto superior direito** = bem avaliados e "
                 "populares (referência do bairro); **canto superior esquerdo** = bem "
