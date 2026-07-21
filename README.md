@@ -1,9 +1,13 @@
 # Airbnb Rio de Janeiro — Análise Espacial (App Streamlit)
 
-App com 3 abas:
+App com 6 abas:
+
 - 🗺️ **Mapa Dinâmico** — bairros coloridos por score de luxo, bolhas de rentabilidade/ocupação, pontos turísticos, com filtro por faixa de preço e por região popular/não popular.
 - 📅 **Sazonalidade** — ocupação média por mês (ano cheio) e preço médio por mês (meses coletados), destacando alta e baixa temporada.
-- 📊 **Correlações** — matriz de correlação (preço, ocupação, luxo, rentabilidade, distância a ponto turístico) e Índice de Moran Global (autocorrelação espacial do preço entre bairros vizinhos).
+- 📈 **Evolução Histórica de Preços** — variação do preço da diária entre coletas (valores nominais, sem correção pela inflação/IPCA) e evolução do preço médio por bairro.
+- 🧮 **Simulador de Investimento** — simulação de preço, ocupação e rentabilidade esperada, comparando com a média de um bairro de referência escolhido.
+- 🎯 **Recomendação por Turismo** — sugestão de hospedagens perto dos pontos turísticos que o usuário quer visitar.
+- 📝 **Análise de Avaliações** — pontos fortes e fracos por bairro a partir das sub-notas de avaliação (limpeza, comunicação, localização etc.), com fallback para nota composta e indicadores de engajamento quando essas sub-notas não estão disponíveis no dataset.
 
 ## Estrutura de pastas
 
@@ -40,8 +44,10 @@ Abre automaticamente em `http://localhost:8501`.
 
 - **Pontos turísticos (osmnx):** a primeira vez que o app carrega, ele busca os pontos turísticos do Rio no OpenStreetMap (precisa de internet). O resultado fica em cache (`@st.cache_data`) enquanto o app estiver no ar — não busca de novo a cada clique do usuário, só quando o servidor reinicia.
 - **Se o deploy no Streamlit Cloud falhar por causa do `geopandas`/`osmnx`** (erro relacionado a GDAL): crie um arquivo `packages.txt` na raiz do repositório com o conteúdo abaixo — ele instala as dependências de sistema que faltam:
-  ```
-  gdal-bin
-  libgdal-dev
-  ```
-- **Se quiser trocar os dados no futuro** (nova coleta, mais bairros etc.): é só substituir os arquivos dentro de `dados/` mantendo os mesmos nomes de coluna usados no `app.py`.
+
+```
+libgdal-dev
+gdal-bin
+```
+
+- **Análise Fatorial e Modelagem Preditiva:** partes do código dependem de `factor_analyzer`, `scikit-learn`, `statsmodels` e `joblib`. Se algum desses pacotes não estiver instalado, o app usa fallback automático (`FACTOR_ANALYZER_DISPONIVEL` / `MODELAGEM_DISPONIVEL`) e simplesmente esconde os recursos que dependem deles, sem quebrar.
