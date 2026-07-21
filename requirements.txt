@@ -1,0 +1,14 @@
+streamlit
+pandas
+numpy
+geopandas
+plotly
+folium
+streamlit-folium
+scipy
+branca
+factor_analyzer
+scikit-learn
+statsmodels
+joblib
+osmnx
