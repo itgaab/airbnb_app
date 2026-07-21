@@ -34,11 +34,18 @@ try:
     from sklearn.linear_model import RidgeCV, LassoCV
     from sklearn.ensemble import RandomForestRegressor
     from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    from sklearn.cluster import KMeans
     import statsmodels.api as sm
     from statsmodels.stats.outliers_influence import variance_inflation_factor
     MODELAGEM_DISPONIVEL = True
 except ImportError:
     MODELAGEM_DISPONIVEL = False
+
+try:
+    from scipy import stats as scipy_stats
+    SCIPY_STATS_DISPONIVEL = True
+except ImportError:
+    SCIPY_STATS_DISPONIVEL = False
 
 try:
     import joblib
@@ -261,6 +268,130 @@ def criar_faixa_preco_controlada(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Análise de sensibilidade do teto de outlier
+# Recalcula a faixa de preço trocando o teto (p95 / p99 / p99.5) para checar se
+# a distribuição de anúncios por faixa muda muito conforme o corte escolhido.
+# ---------------------------------------------------------------------------
+@st.cache_data
+def teste_sensibilidade_faixa_preco(df: pd.DataFrame, tetos=(0.95, 0.99, 0.995)) -> pd.DataFrame:
+    if "preco" not in df.columns:
+        return pd.DataFrame()
+
+    linhas = []
+    for p in tetos:
+        teto = df["preco"].quantile(p)
+        normal = df.loc[df["preco"] <= teto, "preco"]
+        q1, q2, q3 = normal.quantile([0.25, 0.5, 0.75]).values
+
+        def _faixa_local(v, teto=teto, q1=q1, q2=q2, q3=q3):
+            if pd.isna(v):
+                return None
+            if v > teto:
+                return "Outlier"
+            if v <= q1:
+                return "Econômico"
+            if v <= q2:
+                return "Médio"
+            if v <= q3:
+                return "Alto"
+            return "Premium"
+
+        contagem = df["preco"].apply(_faixa_local).value_counts()
+        linha = {"teto_percentil": f"p{p * 100:g}", "valor_teto_reais": round(float(teto), 2)}
+        for faixa in ["Econômico", "Médio", "Alto", "Premium", "Outlier"]:
+            linha[faixa] = int(contagem.get(faixa, 0))
+        linhas.append(linha)
+    return pd.DataFrame(linhas)
+
+
+# ---------------------------------------------------------------------------
+# Teste de associação: qualidade_percebida x preço / ocupação
+# ANOVA (variável numérica contínua) mostra se a média de preço/ocupação difere
+# entre as faixas de qualidade percebida — usado para defender que a
+# categorização captura sinal real, não só reduz a variável.
+# ---------------------------------------------------------------------------
+@st.cache_data
+def teste_associacao_qualidade(df: pd.DataFrame) -> dict:
+    resultado = {}
+    if not SCIPY_STATS_DISPONIVEL or "qualidade_percebida" not in df.columns:
+        return resultado
+    for alvo in ["preco", "taxa_ocupacao_estimada"]:
+        if alvo not in df.columns:
+            continue
+        grupos = [
+            g[alvo].dropna().values
+            for _, g in df.dropna(subset=[alvo, "qualidade_percebida"]).groupby("qualidade_percebida")
+        ]
+        grupos = [g for g in grupos if len(g) > 1]
+        if len(grupos) < 2:
+            continue
+        f_stat, p_valor = scipy_stats.f_oneway(*grupos)
+        resultado[alvo] = {"f_stat": float(f_stat), "p_valor": float(p_valor)}
+    return resultado
+
+
+# ---------------------------------------------------------------------------
+# Dispersão das notas por bairro
+# Complementa a média: dois bairros com nota média igual podem ter consistência
+# bem diferente (desvio-padrão baixo = experiência previsível; alto = "loteria").
+# ---------------------------------------------------------------------------
+@st.cache_data
+def dispersao_notas_bairro(df: pd.DataFrame, n_min: int = 5) -> pd.DataFrame:
+    if not {"bairro_padronizado", "nota_composta", "id_anuncio"}.issubset(df.columns):
+        return pd.DataFrame()
+    agg = df.groupby("bairro_padronizado").agg(
+        nota_media=("nota_composta", "mean"),
+        nota_desvio_padrao=("nota_composta", "std"),
+        qtd_anuncios=("id_anuncio", "count"),
+    ).dropna()
+    return agg[agg["qtd_anuncios"] >= n_min].sort_values("nota_desvio_padrao")
+
+
+# ---------------------------------------------------------------------------
+# Validação quantitativa do "perfil do anfitrião" manual via KMeans
+# Roda um KMeans (mesmo nº de clusters que categorias manuais, ignorando
+# "Não classificado") sobre variáveis do anfitrião e compara com a regra
+# hierárquica manual via tabela cruzada — se os clusters "batem" bastante com
+# as categorias manuais, é evidência de que a regra captura uma estrutura real
+# nos dados, não é arbitrária.
+# ---------------------------------------------------------------------------
+@st.cache_data
+def comparar_perfil_kmeans(df: pd.DataFrame, n_clusters: int = 4) -> dict:
+    if not MODELAGEM_DISPONIVEL or "perfil_anfitriao" not in df.columns:
+        return {}
+
+    variaveis = [c for c in [
+        "total_anuncios_anfitriao", "nota_composta", "numero_avaliacoes",
+        "avaliacoes_por_mes", "e_superanfitriao",
+    ] if c in df.columns]
+    if not variaveis:
+        return {}
+
+    base = df.dropna(subset=variaveis).copy()
+    if base.empty:
+        return {}
+    if "e_superanfitriao" in base.columns:
+        base["e_superanfitriao"] = (base["e_superanfitriao"] == "t").astype(int)
+
+    X = StandardScaler().fit_transform(base[variaveis])
+    km = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)
+    base["cluster_kmeans"] = km.fit_predict(X)
+
+    pct_nao_classificado = float((df["perfil_anfitriao"] == "Não classificado").mean())
+
+    tabela_cruzada = pd.crosstab(base["perfil_anfitriao"], base["cluster_kmeans"])
+    # concordância: para cada categoria manual, % de anúncios no cluster majoritário dela
+    concordancia = (tabela_cruzada.max(axis=1) / tabela_cruzada.sum(axis=1)).mean()
+
+    return {
+        "tabela_cruzada": tabela_cruzada,
+        "concordancia_media": float(concordancia),
+        "pct_nao_classificado": pct_nao_classificado,
+        "variaveis_usadas": variaveis,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Modelos preditivos (Simulador de Investimento)
 # Gerados pelo notebook 05-1_modelagem_preditiva.ipynb (pasta outputs/modelos/)
 # ---------------------------------------------------------------------------
@@ -398,6 +529,70 @@ def calcular_perfis_predefinidos(df: pd.DataFrame) -> dict:
                 perfil[c] = int(round(sub[c].median()))
         perfis[nome_perfil] = perfil
     return perfis
+
+
+# ---------------------------------------------------------------------------
+# Multicolinearidade (VIF) das variáveis numéricas do modelo de preço
+# score_luxo, nota_composta e várias amenities tendem a ser correlacionadas —
+# VIF alto (regra prática: > 5 ou > 10) indica que a variável carrega
+# informação redundante com as demais, o que infla o erro-padrão dos
+# coeficientes (mais relevante para modelos lineares/Ridge/Lasso que para RF).
+# ---------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def calcular_vif_preco(df: pd.DataFrame, _modelos: dict) -> pd.DataFrame:
+    if not MODELAGEM_DISPONIVEL:
+        return pd.DataFrame()
+    preditores_num = _modelos.get("preditores_num_preco", [])
+    preditores_num = [c for c in preditores_num if c in df.columns]
+    if len(preditores_num) < 2:
+        return pd.DataFrame()
+
+    base = df[preditores_num].dropna()
+    if base.shape[0] < len(preditores_num) + 1:
+        return pd.DataFrame()
+
+    X = sm.add_constant(base)
+    linhas = []
+    for i, col in enumerate(X.columns):
+        if col == "const":
+            continue
+        try:
+            vif = variance_inflation_factor(X.values, i)
+        except Exception:
+            vif = np.nan
+        linhas.append({"variavel": col, "vif": round(float(vif), 2)})
+    return pd.DataFrame(linhas).sort_values("vif", ascending=False)
+
+
+# ---------------------------------------------------------------------------
+# Baseline simples (média de preço por bairro) para comparar com o modelo real
+# Mostra o ganho de usar Ridge/Lasso/RF em vez de simplesmente prever a média
+# histórica do bairro — argumento direto de "o modelo agrega valor" pra banca.
+# ---------------------------------------------------------------------------
+@st.cache_data(show_spinner=False)
+def comparar_modelo_com_baseline(df: pd.DataFrame, _modelos: dict) -> dict:
+    if not MODELAGEM_DISPONIVEL or "bairro_padronizado" not in df.columns or "preco" not in df.columns:
+        return {}
+    preditores_preco = _modelos.get("preditores_num_preco", []) + _modelos.get("preditores_cat_preco", [])
+    colunas = [c for c in set(preditores_preco + ["bairro_padronizado", "preco"]) if c in df.columns]
+    base = df.dropna(subset=colunas).copy()
+    if base.empty:
+        return {}
+
+    preco_real = base["preco"].values
+    preco_modelo = np.expm1(_modelos["modelo_preco"].predict(base[preditores_preco]))
+
+    media_bairro = base.groupby("bairro_padronizado")["preco"].transform("mean")
+    preco_baseline = media_bairro.values
+
+    return {
+        "rmse_modelo": float(np.sqrt(mean_squared_error(preco_real, preco_modelo))),
+        "mae_modelo": float(mean_absolute_error(preco_real, preco_modelo)),
+        "r2_modelo": float(r2_score(preco_real, preco_modelo)),
+        "rmse_baseline": float(np.sqrt(mean_squared_error(preco_real, preco_baseline))),
+        "mae_baseline": float(mean_absolute_error(preco_real, preco_baseline)),
+        "r2_baseline": float(r2_score(preco_real, preco_baseline)),
+    }
 
 
 @st.cache_data(show_spinner=False)
