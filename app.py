@@ -53,6 +53,12 @@ try:
 except ImportError:
     JOBLIB_DISPONIVEL = False
 
+try:
+    import anthropic
+    ANTHROPIC_DISPONIVEL = True
+except ImportError:
+    ANTHROPIC_DISPONIVEL = False
+
 st.set_page_config(page_title="Airbnb Rio de Janeiro  Análise Espacial", layout="wide")
 
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
@@ -100,6 +106,36 @@ def agregar_por_bairro(df):
         lon=("longitude", "mean"),
     ).reset_index()
     return agg
+
+
+@st.cache_data
+def montar_contexto_dados(df, agg):
+    """Resume o dataset carregado em texto, para dar contexto ao assistente de IA
+    sem precisar mandar o dataframe inteiro (que estouraria o limite de tokens)."""
+    top_caros = agg.nlargest(5, "preco_medio")[["bairro_padronizado", "preco_medio"]]
+    top_baratos = agg.nsmallest(5, "preco_medio")[["bairro_padronizado", "preco_medio"]]
+    top_rentaveis = agg.nlargest(5, "rentabilidade_media")[["bairro_padronizado", "rentabilidade_media"]]
+
+    partes = [
+        f"O dataset tem {len(df)} anúncios do Airbnb no Rio de Janeiro, distribuídos em "
+        f"{agg.shape[0]} bairros.",
+        f"Preço médio geral: R$ {df['preco'].mean():.2f} (mediana R$ {df['preco'].median():.2f}).",
+        "5 bairros mais caros (preço médio): " + "; ".join(
+            f"{r.bairro_padronizado} (R$ {r.preco_medio:.0f})" for r in top_caros.itertuples()
+        ),
+        "5 bairros mais baratos (preço médio): " + "; ".join(
+            f"{r.bairro_padronizado} (R$ {r.preco_medio:.0f})" for r in top_baratos.itertuples()
+        ),
+        "5 bairros com maior rentabilidade diária média: " + "; ".join(
+            f"{r.bairro_padronizado} (R$ {r.rentabilidade_media:.2f})" for r in top_rentaveis.itertuples()
+        ),
+    ]
+    if "nota_composta" in df.columns:
+        partes.append(f"Nota composta média das hospedagens: {df['nota_composta'].mean():.2f}.")
+    if "faixa_preco" in df.columns:
+        dist = df["faixa_preco"].value_counts(normalize=True).mul(100).round(1)
+        partes.append("Distribuição por faixa de preço (%): " + "; ".join(f"{k}: {v}%" for k, v in dist.items()))
+    return "\n".join(partes)
 
 
 @st.cache_data(show_spinner="Buscando pontos turísticos no OpenStreetMap...")
@@ -672,9 +708,9 @@ with st.expander("ℹ️ Como classificamos perfil do anfitrião, faixa de preç
         "bons **e** populares ao mesmo tempo."
     )
 
-aba_mapa, aba_sazonalidade, aba_evolucao, aba_simulador, aba_recomendacao, aba_avaliacoes = st.tabs(
-    ["🗺️ Mapa Dinâmico", "📅 Sazonalidade", "📈 Evolução Histórica de Preços",
-     "🧮 Simulador de Investimento", "🎯 Recomendação por Turismo", "📝 Análise de Avaliações"]
+aba_mapa, aba_sazonalidade, aba_simulador, aba_recomendacao, aba_avaliacoes, aba_assistente = st.tabs(
+    ["🗺️ Mapa Dinâmico", "📅 Sazonalidade", "🧮 Simulador de Investimento",
+     "🎯 Recomendação por Turismo", "📝 Análise de Avaliações", "🤖 Assistente IA"]
 )
 
 # ---------------------------------------------------------------------------
@@ -847,18 +883,16 @@ with aba_sazonalidade:
             "A ocupação mensal cobre o ano cheio, pois vem do calendário futuro de disponibilidade."
         )
 
-# ---------------------------------------------------------------------------
-# ABA 3 — EVOLUÇÃO HISTÓRICA DE PREÇOS
-# ---------------------------------------------------------------------------
-with aba_evolucao:
+    st.divider()
+    st.subheader("📈 Evolução histórica de preços entre coletas")
+
     if temporal is None:
         st.warning(
-            "Esta aba precisa do arquivo `listings_temporal.parquet` (múltiplas coletas do "
+            "Esta seção precisa do arquivo `listings_temporal.parquet` (múltiplas coletas do "
             "Airbnb ao longo do tempo), que não foi encontrado na pasta de dados. "
             "Coloque esse arquivo em `dados/` para habilitar esta análise."
         )
     else:
-        st.subheader("Evolução do preço da diária entre coletas")
         st.caption(
             "Cada coleta é uma foto do mercado num momento diferente — não é o preço de um "
             "mesmo anúncio ao longo do tempo, mas sim como o conjunto de anúncios ativos se "
@@ -934,7 +968,7 @@ with aba_evolucao:
             )
 
             st.divider()
-            st.subheader("Evolução do preço médio por bairro")
+            st.markdown("##### Evolução do preço médio por bairro")
 
             coluna_bairro_temp = next(
                 (c for c in ["bairro_padronizado", "neighbourhood_cleansed", "neighbourhood"] if c in temporal.columns),
@@ -976,7 +1010,7 @@ with aba_evolucao:
                     st.info("Selecione pelo menos um bairro para ver o gráfico.")
 
 # ---------------------------------------------------------------------------
-# ABA 4 — SIMULADOR DE INVESTIMENTO
+# ABA 3 — SIMULADOR DE INVESTIMENTO
 # ---------------------------------------------------------------------------
 with aba_simulador:
     st.subheader("Simulador de Preço, Ocupação e Rentabilidade")
@@ -1293,7 +1327,7 @@ with aba_simulador:
 
 
 # ---------------------------------------------------------------------------
-# ABA 5 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
+# ABA 4 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
 # ---------------------------------------------------------------------------
 with aba_recomendacao:
     st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
@@ -1430,7 +1464,7 @@ with aba_recomendacao:
 
 
 # ---------------------------------------------------------------------------
-# ABA 6 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
+# ABA 5 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
 # Esta aba já era declarada em st.tabs() mas não tinha bloco `with aba_avaliacoes:`
 # — ficava vazia. Se o dataset tiver sub-notas por aspecto (limpeza, comunicação,
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
@@ -1605,4 +1639,84 @@ with aba_avaliacoes:
                 "populares (referência do bairro); **canto superior esquerdo** = bem "
                 "avaliados mas pouco visitados (oportunidade de divulgação); **canto "
                 "inferior direito** = populares mas mal avaliados (risco — vale investigar)."
+            )
+
+
+# ---------------------------------------------------------------------------
+# ABA 6 — ASSISTENTE IA
+# Chat livre (Claude, via API da Anthropic), mas com o resumo do dataset
+# injetado no system prompt para que a assistente também consiga responder
+# perguntas sobre os dados carregados no app.
+# ---------------------------------------------------------------------------
+with aba_assistente:
+    st.subheader("🤖 Assistente IA")
+    st.caption(
+        "Converse livremente ou pergunte sobre os dados deste app (bairros, preços, "
+        "rentabilidade, avaliações etc.). A assistente tem acesso a um resumo do dataset "
+        "carregado, mas não aos filtros que você aplicou nas outras abas."
+    )
+
+    if not ANTHROPIC_DISPONIVEL:
+        st.error(
+            "A biblioteca `anthropic` não está instalada. Adicione `anthropic` ao "
+            "requirements.txt e reinstale as dependências."
+        )
+    elif "ANTHROPIC_API_KEY" not in st.secrets:
+        st.warning(
+            "Nenhuma chave de API encontrada. Crie o arquivo `.streamlit/secrets.toml` "
+            "com:\n\n```toml\nANTHROPIC_API_KEY = \"sk-ant-...\"\n```\n\n"
+            "No Streamlit Community Cloud, configure em "
+            "**App settings → Secrets**. A chave é gerada em https://console.anthropic.com."
+        )
+    else:
+        cliente_ia = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
+        contexto_dados = montar_contexto_dados(df, agg)
+
+        system_prompt = (
+            "Você é a assistente de IA embutida em um app Streamlit de análise do mercado "
+            "de Airbnb no Rio de Janeiro. Responda em português do Brasil, de forma direta "
+            "e objetiva. Use o resumo de dados abaixo quando a pergunta for sobre o "
+            "dataset; para perguntas gerais, responda normalmente sem forçar o contexto.\n\n"
+            f"### Resumo do dataset carregado\n{contexto_dados}"
+        )
+
+        if "mensagens_assistente" not in st.session_state:
+            st.session_state.mensagens_assistente = []
+
+        col_limpar, _ = st.columns([1, 4])
+        with col_limpar:
+            if st.button("🗑️ Limpar conversa"):
+                st.session_state.mensagens_assistente = []
+                st.rerun()
+
+        for msg in st.session_state.mensagens_assistente:
+            with st.chat_message(msg["role"]):
+                st.markdown(msg["content"])
+
+        pergunta = st.chat_input("Pergunte algo sobre os dados ou converse livremente...")
+        if pergunta:
+            st.session_state.mensagens_assistente.append({"role": "user", "content": pergunta})
+            with st.chat_message("user"):
+                st.markdown(pergunta)
+
+            with st.chat_message("assistant"):
+                placeholder = st.empty()
+                resposta_completa = ""
+                try:
+                    with cliente_ia.messages.stream(
+                        model="claude-sonnet-4-6",
+                        max_tokens=1024,
+                        system=system_prompt,
+                        messages=st.session_state.mensagens_assistente,
+                    ) as stream:
+                        for texto in stream.text_stream:
+                            resposta_completa += texto
+                            placeholder.markdown(resposta_completa + "▌")
+                    placeholder.markdown(resposta_completa)
+                except Exception as e:
+                    resposta_completa = f"Erro ao consultar a API da Anthropic: {e}"
+                    placeholder.error(resposta_completa)
+
+            st.session_state.mensagens_assistente.append(
+                {"role": "assistant", "content": resposta_completa}
             )
