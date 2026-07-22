@@ -1663,10 +1663,12 @@ with aba_assistente:
         )
     elif "ANTHROPIC_API_KEY" not in st.secrets:
         st.warning(
-            "Nenhuma chave de API encontrada. Crie o arquivo `.streamlit/secrets.toml` "
-            "com:\n\n```toml\nANTHROPIC_API_KEY = \"sk-ant-...\"\n```\n\n"
-            "No Streamlit Community Cloud, configure em "
-            "**App settings → Secrets**. A chave é gerada em https://console.anthropic.com."
+            "Nenhuma chave de API encontrada. Crie o arquivo `.streamlit/secrets.toml` com:"
+        )
+        st.code('ANTHROPIC_API_KEY = "sk-ant-..."', language="toml")
+        st.caption(
+            "No Streamlit Community Cloud, configure em **App settings → Secrets**. "
+            "A chave é gerada em https://console.anthropic.com."
         )
     else:
         cliente_ia = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
