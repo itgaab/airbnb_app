@@ -1,7 +1,15 @@
 """
-Análise Estatística — Airbnb Rio de Janeiro
-App Streamlit com abas: Mapa Dinâmico, Sazonalidade, Evolução Histórica de Preços,
-Análise Descritiva, Análise Fatorial e Modelagem Preditiva.
+Análise Espacial e Preditiva do Airbnb — Rio de Janeiro
+
+App Streamlit interativo que cruza dados geográficos, temporais e de avaliação
+dos anúncios para apoiar decisões de hóspedes e investidores. Organizado em
+seis abas:
+  1. Mapa Dinâmico — luxo, rentabilidade, ocupação e turismo por bairro
+  2. Evolução Temporal dos Preços — sazonalidade e histórico entre coletas
+  3. Simulador de Investimento — previsão de preço, ocupação e rentabilidade
+  4. Recomendação por Turismo — melhores anúncios perto de pontos de interesse
+  5. Análise de Avaliações — pontos fortes e fracos por bairro e anúncio
+  6. Assistente IA — perguntas em linguagem natural sobre os dados
 """
 
 import os
@@ -85,18 +93,26 @@ def carregar_dados():
     except FileNotFoundError:
         temporal = None
 
-    # Traz nome e link do anúncio a partir do listings.csv bruto (Inside Airbnb), se o
+    # Traz nome e link do anúncio a partir do listings.csv/parquet bruto (Inside Airbnb), se o
     # arquivo estiver na pasta de dados. dataset_features.parquet não carrega essas colunas.
+    # Preferimos o parquet (listings_nome_link.parquet), bem mais leve pro repositório;
+    # se não existir, caímos de volta pro CSV completo.
+    bruto = None
+    caminho_parquet_nome_link = os.path.join(PASTA_DADOS, "listings_nome_link.parquet")
+    caminho_csv_nome_link = os.path.join(PASTA_DADOS, "listings.csv")
     try:
-        bruto = pd.read_csv(
-            os.path.join(PASTA_DADOS, "listings.csv"),
-            usecols=["id", "name", "listing_url"],
-        ).rename(columns={"id": "id_anuncio"})
+        if os.path.exists(caminho_parquet_nome_link):
+            bruto = pd.read_parquet(caminho_parquet_nome_link, columns=["id", "name", "listing_url"])
+        else:
+            bruto = pd.read_csv(caminho_csv_nome_link, usecols=["id", "name", "listing_url"])
+    except (FileNotFoundError, ValueError, KeyError):
+        bruto = None
+
+    if bruto is not None:
+        bruto = bruto.rename(columns={"id": "id_anuncio"})
         bruto["id_anuncio"] = bruto["id_anuncio"].astype(str)
         df["id_anuncio"] = df["id_anuncio"].astype(str)
         df = df.merge(bruto, on="id_anuncio", how="left")
-    except (FileNotFoundError, ValueError, KeyError):
-        pass
 
     return df, gdf, calendario, temporal
 
