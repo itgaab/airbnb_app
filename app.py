@@ -138,22 +138,35 @@ def montar_contexto_dados(df, agg):
     return "\n".join(partes)
 
 
-@st.cache_data(show_spinner="Buscando pontos turísticos no OpenStreetMap...")
+@st.cache_data(show_spinner=False)
 def buscar_pontos_turisticos():
-    try:
-        import osmnx as ox
-        tags = {
-            "tourism": ["attraction", "viewpoint", "museum"],
-            "natural": "beach",
-            "historic": ["monument", "memorial"],
-        }
-        pontos = ox.features_from_place("Rio de Janeiro, Brazil", tags)
-        pontos = pontos.assign(geometry=pontos.geometry.centroid)
-        pontos = pontos.assign(lat=pontos.geometry.y, lon=pontos.geometry.x, nome=pontos.get("name"))
-        pontos = pontos[["nome", "lat", "lon"]].dropna().drop_duplicates("nome").reset_index(drop=True)
-        return pontos
-    except Exception:
-        return pd.DataFrame(columns=["nome", "lat", "lon"])
+    """Lista curada com os 20 principais pontos turísticos do Rio de Janeiro
+    (coordenadas aproximadas). Fixa, para manter o mapa legível — antes a
+    consulta ao OpenStreetMap trazia centenas de pontos (atrações, museus,
+    mirantes etc. da cidade inteira)."""
+    pontos = pd.DataFrame([
+        {"nome": "Cristo Redentor",                 "lat": -22.9519, "lon": -43.2105},
+        {"nome": "Pão de Açúcar",                    "lat": -22.9492, "lon": -43.1545},
+        {"nome": "Praia de Copacabana",              "lat": -22.9711, "lon": -43.1822},
+        {"nome": "Praia de Ipanema",                 "lat": -22.9838, "lon": -43.2096},
+        {"nome": "Praia do Leblon",                  "lat": -22.9847, "lon": -43.2247},
+        {"nome": "Praia da Barra da Tijuca",         "lat": -23.0086, "lon": -43.3651},
+        {"nome": "Jardim Botânico",                  "lat": -22.9675, "lon": -43.2247},
+        {"nome": "Parque Lage",                      "lat": -22.9581, "lon": -43.2145},
+        {"nome": "Floresta da Tijuca",                "lat": -22.9556, "lon": -43.2803},
+        {"nome": "Escadaria Selarón",                "lat": -22.9147, "lon": -43.1806},
+        {"nome": "Museu do Amanhã",                  "lat": -22.8947, "lon": -43.1806},
+        {"nome": "Museu de Arte Moderna (MAM)",      "lat": -22.9147, "lon": -43.1719},
+        {"nome": "Museu de Arte do Rio (MAR)",       "lat": -22.8958, "lon": -43.1817},
+        {"nome": "Theatro Municipal",                "lat": -22.9092, "lon": -43.1761},
+        {"nome": "Confeitaria Colombo",               "lat": -22.9053, "lon": -43.1789},
+        {"nome": "Feira de São Cristóvão",           "lat": -22.8975, "lon": -43.2225},
+        {"nome": "Maracanã",                         "lat": -22.9122, "lon": -43.2302},
+        {"nome": "Lagoa Rodrigo de Freitas",         "lat": -22.9722, "lon": -43.2044},
+        {"nome": "Arcos da Lapa",                    "lat": -22.9139, "lon": -43.1794},
+        {"nome": "AquaRio / Praça Mauá",             "lat": -22.8944, "lon": -43.1808},
+    ])
+    return pontos[["nome", "lat", "lon"]].reset_index(drop=True)
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -1339,8 +1352,7 @@ with aba_recomendacao:
 
     if pontos_turisticos.empty:
         st.warning(
-            "Não foi possível carregar a lista de pontos turísticos do OpenStreetMap "
-            "(pacote `osmnx` indisponível ou falha na consulta). Esta aba fica desabilitada."
+            "Nenhum ponto turístico cadastrado no momento. Esta aba fica desabilitada."
         )
     else:
         nomes_pontos = sorted(pontos_turisticos["nome"].dropna().unique().tolist())
