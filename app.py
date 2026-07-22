@@ -140,31 +140,57 @@ def montar_contexto_dados(df, agg):
 
 @st.cache_data(show_spinner=False)
 def buscar_pontos_turisticos():
-    """Lista curada com os 20 principais pontos turísticos do Rio de Janeiro
-    (coordenadas aproximadas). Fixa, para manter o mapa legível — antes a
-    consulta ao OpenStreetMap trazia centenas de pontos (atrações, museus,
-    mirantes etc. da cidade inteira)."""
+    """Lista curada com os principais pontos turísticos do Rio de Janeiro
+    (coordenadas aproximadas), distribuídos entre Zona Sul, Centro, Zona Norte
+    e Zona Oeste/Barra. Fixa, para manter o mapa legível — antes a consulta ao
+    OpenStreetMap trazia centenas de pontos concentrados sobretudo na Zona Sul."""
     pontos = pd.DataFrame([
-        {"nome": "Cristo Redentor",                 "lat": -22.9519, "lon": -43.2105},
-        {"nome": "Pão de Açúcar",                    "lat": -22.9492, "lon": -43.1545},
-        {"nome": "Praia de Copacabana",              "lat": -22.9711, "lon": -43.1822},
-        {"nome": "Praia de Ipanema",                 "lat": -22.9838, "lon": -43.2096},
-        {"nome": "Praia do Leblon",                  "lat": -22.9847, "lon": -43.2247},
-        {"nome": "Praia da Barra da Tijuca",         "lat": -23.0086, "lon": -43.3651},
-        {"nome": "Jardim Botânico",                  "lat": -22.9675, "lon": -43.2247},
-        {"nome": "Parque Lage",                      "lat": -22.9581, "lon": -43.2145},
-        {"nome": "Floresta da Tijuca",                "lat": -22.9556, "lon": -43.2803},
-        {"nome": "Escadaria Selarón",                "lat": -22.9147, "lon": -43.1806},
-        {"nome": "Museu do Amanhã",                  "lat": -22.8947, "lon": -43.1806},
-        {"nome": "Museu de Arte Moderna (MAM)",      "lat": -22.9147, "lon": -43.1719},
-        {"nome": "Museu de Arte do Rio (MAR)",       "lat": -22.8958, "lon": -43.1817},
-        {"nome": "Theatro Municipal",                "lat": -22.9092, "lon": -43.1761},
-        {"nome": "Confeitaria Colombo",               "lat": -22.9053, "lon": -43.1789},
-        {"nome": "Feira de São Cristóvão",           "lat": -22.8975, "lon": -43.2225},
-        {"nome": "Maracanã",                         "lat": -22.9122, "lon": -43.2302},
-        {"nome": "Lagoa Rodrigo de Freitas",         "lat": -22.9722, "lon": -43.2044},
-        {"nome": "Arcos da Lapa",                    "lat": -22.9139, "lon": -43.1794},
-        {"nome": "AquaRio / Praça Mauá",             "lat": -22.8944, "lon": -43.1808},
+        # --- Zona Sul ---
+        {"nome": "Cristo Redentor",                      "lat": -22.9519, "lon": -43.2105},
+        {"nome": "Pão de Açúcar",                         "lat": -22.9492, "lon": -43.1545},
+        {"nome": "Praia Vermelha",                        "lat": -22.9497, "lon": -43.1631},
+        {"nome": "Praia de Copacabana",                   "lat": -22.9711, "lon": -43.1822},
+        {"nome": "Forte de Copacabana",                   "lat": -22.9878, "lon": -43.1778},
+        {"nome": "Praia do Arpoador",                     "lat": -22.9878, "lon": -43.1936},
+        {"nome": "Praia de Ipanema",                      "lat": -22.9838, "lon": -43.2096},
+        {"nome": "Praia do Leblon",                       "lat": -22.9847, "lon": -43.2247},
+        {"nome": "Jardim Botânico",                       "lat": -22.9675, "lon": -43.2247},
+        {"nome": "Parque Lage",                           "lat": -22.9581, "lon": -43.2145},
+        {"nome": "Lagoa Rodrigo de Freitas",              "lat": -22.9722, "lon": -43.2044},
+        {"nome": "Mirante Dona Marta",                    "lat": -22.9553, "lon": -43.1975},
+        {"nome": "Vista Chinesa",                         "lat": -22.9686, "lon": -43.2394},
+        {"nome": "Praia de São Conrado",                  "lat": -22.9997, "lon": -43.2564},
+        {"nome": "Pedra da Gávea",                        "lat": -22.9908, "lon": -43.2789},
+        # --- Centro / Santa Teresa / Lapa ---
+        {"nome": "Santa Teresa (Bondinho)",               "lat": -22.9192, "lon": -43.1867},
+        {"nome": "Escadaria Selarón",                     "lat": -22.9147, "lon": -43.1806},
+        {"nome": "Arcos da Lapa",                         "lat": -22.9139, "lon": -43.1794},
+        {"nome": "Theatro Municipal",                     "lat": -22.9092, "lon": -43.1761},
+        {"nome": "Confeitaria Colombo",                   "lat": -22.9053, "lon": -43.1789},
+        {"nome": "Museu Nacional de Belas Artes",         "lat": -22.9086, "lon": -43.1747},
+        {"nome": "Biblioteca Nacional",                   "lat": -22.9097, "lon": -43.1758},
+        {"nome": "Catedral Metropolitana",                "lat": -22.9114, "lon": -43.1802},
+        {"nome": "Igreja de São Francisco da Penitência", "lat": -22.9057, "lon": -43.1806},
+        {"nome": "Museu do Amanhã",                       "lat": -22.8947, "lon": -43.1806},
+        {"nome": "Museu de Arte Moderna (MAM)",           "lat": -22.9147, "lon": -43.1719},
+        {"nome": "Museu de Arte do Rio (MAR)",            "lat": -22.8958, "lon": -43.1817},
+        {"nome": "AquaRio / Praça Mauá",                  "lat": -22.8944, "lon": -43.1808},
+        {"nome": "Cais do Valongo",                       "lat": -22.8944, "lon": -43.1867},
+        {"nome": "Ilha Fiscal",                           "lat": -22.8956, "lon": -43.1697},
+        # --- Zona Norte ---
+        {"nome": "Maracanã",                              "lat": -22.9122, "lon": -43.2302},
+        {"nome": "Quinta da Boa Vista",                   "lat": -22.9058, "lon": -43.2244},
+        {"nome": "Museu Nacional (Quinta da Boa Vista)",  "lat": -22.9067, "lon": -43.2242},
+        {"nome": "Feira de São Cristóvão",                "lat": -22.8975, "lon": -43.2225},
+        {"nome": "Sambódromo",                            "lat": -22.9111, "lon": -43.1964},
+        {"nome": "Estádio Nilton Santos (Engenhão)",      "lat": -22.8931, "lon": -43.2831},
+        {"nome": "Floresta da Tijuca",                    "lat": -22.9556, "lon": -43.2803},
+        # --- Zona Oeste / Barra ---
+        {"nome": "Praia da Barra da Tijuca",              "lat": -23.0086, "lon": -43.3651},
+        {"nome": "Praia do Recreio dos Bandeirantes",     "lat": -23.0197, "lon": -43.4536},
+        {"nome": "Parque Olímpico",                       "lat": -22.9769, "lon": -43.3953},
+        {"nome": "Cidade das Artes",                      "lat": -22.9942, "lon": -43.3653},
+        {"nome": "Pedra Bonita",                          "lat": -22.9875, "lon": -43.2764},
     ])
     return pontos[["nome", "lat", "lon"]].reset_index(drop=True)
 
