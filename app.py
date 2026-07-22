@@ -84,6 +84,20 @@ def carregar_dados():
         temporal = pd.read_parquet(os.path.join(PASTA_DADOS, "listings_temporal.parquet"))
     except FileNotFoundError:
         temporal = None
+
+    # Traz nome e link do anúncio a partir do listings.csv bruto (Inside Airbnb), se o
+    # arquivo estiver na pasta de dados. dataset_features.parquet não carrega essas colunas.
+    try:
+        bruto = pd.read_csv(
+            os.path.join(PASTA_DADOS, "listings.csv"),
+            usecols=["id", "name", "listing_url"],
+        ).rename(columns={"id": "id_anuncio"})
+        bruto["id_anuncio"] = bruto["id_anuncio"].astype(str)
+        df["id_anuncio"] = df["id_anuncio"].astype(str)
+        df = df.merge(bruto, on="id_anuncio", how="left")
+    except (FileNotFoundError, ValueError, KeyError):
+        pass
+
     return df, gdf, calendario, temporal
 
 
@@ -193,6 +207,19 @@ def buscar_pontos_turisticos():
         {"nome": "Pedra Bonita",                          "lat": -22.9875, "lon": -43.2764},
     ])
     return pontos[["nome", "lat", "lon"]].reset_index(drop=True)
+
+
+def obter_coluna_nome_anuncio(dataframe):
+    """Retorna uma Series com o nome/título de cada anúncio para exibição.
+    Tenta várias colunas comuns (o nome exato depende de como o
+    dataset_features.parquet foi montado); se nenhuma existir, usa o ID."""
+    COLUNAS_NOME_ANUNCIO = ["name", "nome_anuncio", "titulo_anuncio", "titulo", "listing_name"]
+    coluna_nome_anuncio = next((c for c in COLUNAS_NOME_ANUNCIO if c in dataframe.columns), None)
+    if coluna_nome_anuncio:
+        return dataframe[coluna_nome_anuncio].fillna("Anúncio sem título")
+    elif "id_anuncio" in dataframe.columns:
+        return "Anúncio #" + dataframe["id_anuncio"].astype(str)
+    return pd.Series("Anúncio", index=dataframe.index)
 
 
 def haversine_km(lat1, lon1, lat2, lon2):
@@ -748,7 +775,7 @@ with st.expander("ℹ️ Como classificamos perfil do anfitrião, faixa de preç
     )
 
 aba_mapa, aba_sazonalidade, aba_simulador, aba_recomendacao, aba_avaliacoes, aba_assistente = st.tabs(
-    ["🗺️ Mapa Dinâmico", "📅 Sazonalidade", "🧮 Simulador de Investimento",
+    ["🗺️ Mapa Dinâmico", "📅 Evolução Temporal dos Preços", "🧮 Simulador de Investimento",
      "🎯 Recomendação por Turismo", "📝 Análise de Avaliações", "🤖 Assistente IA"]
 )
 
@@ -1411,6 +1438,7 @@ with aba_recomendacao:
 
             colunas_necessarias_rec = [c for c in ["latitude", "longitude", "preco"] if c in df.columns]
             base = df.dropna(subset=colunas_necessarias_rec).copy()
+            base["nome_exibicao"] = obter_coluna_nome_anuncio(base)
 
             # distância mínima de cada anúncio a qualquer um dos pontos selecionados
             distancias = np.column_stack([
@@ -1461,10 +1489,16 @@ with aba_recomendacao:
 
                 for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
                     with st.container(border=True):
+                        link_anuncio_card = linha.get("listing_url")
+                        link_card_md = (
+                            f"[Ver anúncio no Airbnb]({link_anuncio_card})"
+                            if pd.notna(link_anuncio_card) else "Link indisponível"
+                        )
                         st.markdown(
-                            f"**#{posicao} — {linha.get('bairro_padronizado', 'bairro desconhecido')}** · "
+                            f"**#{posicao} — {linha['nome_exibicao']}**\n\n"
+                            f"📍 {linha.get('bairro_padronizado', 'bairro desconhecido')} · "
                             f"{linha.get('tipo_propriedade', '-')} · {linha.get('tipo_quarto', '-')} · "
-                            f"perto de *{linha['ponto_mais_proximo']}*"
+                            f"perto de *{linha['ponto_mais_proximo']}* · {link_card_md}"
                         )
                         rc1, rc2, rc3, rc4 = st.columns(4)
                         rc1.metric("Preço/diária", f"R$ {linha['preco']:.2f}")
@@ -1485,11 +1519,22 @@ with aba_recomendacao:
                         icon=folium.Icon(color="cadetblue", icon="star", prefix="fa"),
                     ).add_to(m_rec)
                 for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
+                    link_anuncio = linha.get("listing_url")
+                    link_html = (
+                        f'<a href="{link_anuncio}" target="_blank">Ver anúncio no Airbnb</a>'
+                        if pd.notna(link_anuncio) else "Link indisponível"
+                    )
+                    popup_html_rec = (
+                        f"<b>#{posicao}</b><br>"
+                        f"{linha['nome_exibicao']}<br>"
+                        f"R$ {linha['preco']:.2f} / diária<br>"
+                        f"{link_html}"
+                    )
                     folium.CircleMarker(
                         location=[linha["latitude"], linha["longitude"]],
                         radius=8, color="#1e3d59", fill=True, fill_color="#ff6e40",
                         fill_opacity=0.85,
-                        popup=f"#{posicao} — R$ {linha['preco']:.2f} · {linha['distancia_km']:.2f} km",
+                        popup=folium.Popup(popup_html_rec, max_width=250),
                     ).add_to(m_rec)
                 st_folium(m_rec, width=None, height=500, returned_objects=[])
 
@@ -1516,6 +1561,51 @@ with aba_avaliacoes:
         "ou precisa melhorar. Quando essas sub-notas não estão no arquivo de features, a "
         "análise cai de volta para a nota composta e os indicadores de engajamento."
     )
+
+    # --- Ranking de anúncios individuais (não só agregado por bairro) ---
+    if {"nota_composta", "id_anuncio"}.issubset(df.columns):
+        st.markdown("##### 🏆 Anúncios mais e menos bem avaliados")
+        n_min_avaliacoes_rank = st.slider(
+            "Mínimo de avaliações por mês para entrar no ranking (evita anúncios com poucos dados)",
+            0.0, 5.0, 0.5, 0.1, key="rank_min_avaliacoes",
+        )
+        base_rank = df.copy()
+        base_rank["nome_exibicao"] = obter_coluna_nome_anuncio(base_rank)
+        if "avaliacoes_por_mes" in base_rank.columns:
+            base_rank = base_rank[base_rank["avaliacoes_por_mes"] >= n_min_avaliacoes_rank]
+
+        colunas_card = [c for c in ["nome_exibicao", "bairro_padronizado", "nota_composta",
+                                     "preco", "avaliacoes_por_mes"] if c in base_rank.columns]
+
+        col_top1, col_top2 = st.columns(2)
+        with col_top1:
+            st.success("**Top 10 melhores avaliados**")
+            melhores = base_rank.sort_values("nota_composta", ascending=False).head(10)[colunas_card]
+            st.dataframe(
+                melhores.rename(columns={
+                    "nome_exibicao": "Anúncio", "bairro_padronizado": "Bairro",
+                    "nota_composta": "Nota", "preco": "Preço (R$)",
+                    "avaliacoes_por_mes": "Aval./mês",
+                }).style.format({"Nota": "{:.2f}", "Preço (R$)": "{:.2f}", "Aval./mês": "{:.2f}"}),
+                hide_index=True, use_container_width=True,
+            )
+        with col_top2:
+            st.warning("**Top 10 piores avaliados**")
+            piores = base_rank.sort_values("nota_composta", ascending=True).head(10)[colunas_card]
+            st.dataframe(
+                piores.rename(columns={
+                    "nome_exibicao": "Anúncio", "bairro_padronizado": "Bairro",
+                    "nota_composta": "Nota", "preco": "Preço (R$)",
+                    "avaliacoes_por_mes": "Aval./mês",
+                }).style.format({"Nota": "{:.2f}", "Preço (R$)": "{:.2f}", "Aval./mês": "{:.2f}"}),
+                hide_index=True, use_container_width=True,
+            )
+        st.caption(
+            "💡 Anúncios com poucas avaliações têm notas mais instáveis (uma única "
+            "avaliação de 5 estrelas já garante nota máxima) — por isso o filtro de "
+            "avaliações mínimas por mês acima."
+        )
+        st.divider()
 
     CANDIDATOS_SUBNOTAS = {
         "review_scores_accuracy": "Precisão do anúncio",
@@ -1572,14 +1662,36 @@ with aba_avaliacoes:
             ].mean()
             delta = (media_bairro - media_cidade).rename(index=subnotas_disponiveis).sort_values()
 
-            fig_delta = px.bar(
-                delta, orientation="h",
-                labels={"value": "Diferença em relação à média da cidade", "index": ""},
-                title=f"{bairro_escolhido}: onde fica acima/abaixo da média da cidade",
-                color=delta.values, color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
-            )
-            fig_delta.update_layout(showlegend=False, coloraxis_showscale=False)
-            st.plotly_chart(fig_delta, use_container_width=True)
+            col_rad1, col_rad2 = st.columns(2)
+            with col_rad1:
+                categorias_radar = list(subnotas_disponiveis.values())
+                fig_radar = go.Figure()
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=media_cidade.rename(index=subnotas_disponiveis)[categorias_radar].values,
+                    theta=categorias_radar, fill="toself", name="Cidade (média)",
+                    line_color="#9aa0a6",
+                ))
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=media_bairro.rename(index=subnotas_disponiveis)[categorias_radar].values,
+                    theta=categorias_radar, fill="toself", name=bairro_escolhido,
+                    line_color="#ff6e40",
+                ))
+                fig_radar.update_layout(
+                    title=f"{bairro_escolhido} vs. cidade — por aspecto",
+                    polar=dict(radialaxis=dict(visible=True)),
+                    showlegend=True, legend=dict(orientation="h", y=-0.1),
+                )
+                st.plotly_chart(fig_radar, use_container_width=True)
+
+            with col_rad2:
+                fig_delta = px.bar(
+                    delta, orientation="h",
+                    labels={"value": "Diferença em relação à média da cidade", "index": ""},
+                    title=f"{bairro_escolhido}: acima/abaixo da média (diferença absoluta)",
+                    color=delta.values, color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
+                )
+                fig_delta.update_layout(showlegend=False, coloraxis_showscale=False)
+                st.plotly_chart(fig_delta, use_container_width=True)
 
             pontos_fracos = delta[delta < -0.05].index.tolist()
             pontos_fortes = delta[delta > 0.05].index.tolist()
