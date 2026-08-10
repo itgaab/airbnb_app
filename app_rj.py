@@ -82,100 +82,136 @@ st.markdown(
     <style>
         :root {
             --acento-azul: #1D5FA5;
-            --acento-azul-suave: rgba(29, 95, 165, 0.10);
+            --acento-azul-escuro: #123F6E;
+            --acento-azul-suave: rgba(29, 95, 165, 0.08);
+            --linha-sutil: rgba(128, 128, 128, 0.22);
+            --linha-media: rgba(128, 128, 128, 0.32);
         }
 
         .block-container {
-            padding-top: 1.6rem;
+            padding-top: 1.5rem;
             padding-bottom: 2.5rem;
             max-width: 1300px;
         }
 
-        /* Cabeçalho — título serifado com régua embaixo, tom editorial */
+        /* Cabeçalho — selo editorial pequeno + título serifado + régua curta
+           em azul (no lugar da régua preta full-width, mais leve) */
+        .cabecalho-app .selo {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--acento-azul);
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
         .cabecalho-app h1 {
             font-family: Georgia, "Times New Roman", serif;
-            font-size: 2.0rem;
+            font-size: 2.05rem;
             font-weight: 400;
             letter-spacing: -0.01em;
-            margin-bottom: 0.15rem;
+            margin: 0 0 0.55rem 0;
+            padding-bottom: 0.6rem;
             color: var(--text-color);
-            border-bottom: 2px solid var(--text-color);
-            padding-bottom: 0.5rem;
+            border-bottom: 1px solid var(--linha-media);
+            position: relative;
+        }
+        .cabecalho-app h1::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            bottom: -1px;
+            width: 56px;
+            height: 2px;
+            background-color: var(--acento-azul);
         }
         .cabecalho-app p {
             color: var(--text-color);
-            opacity: 0.65;
-            font-size: 0.9rem;
-            margin-top: 0.4rem;
+            opacity: 0.62;
+            font-size: 0.92rem;
+            margin-top: 0;
+            line-height: 1.5;
         }
 
-        /* Grade estilo "planilha de jornal" para os KPIs — células com fio
-           fino compartilhado entre si, em vez de cartões soltos */
+        /* KPIs em cartões leves — bordas finas e cantos arredondados no lugar
+           da grade "planilha", com friso azul discreto no topo de cada célula */
         .grade-kpi {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            border-top: 1px solid rgba(128, 128, 128, 0.3);
-            border-left: 1px solid rgba(128, 128, 128, 0.3);
-            margin-bottom: 1rem;
+            gap: 0.7rem;
+            margin-bottom: 1.1rem;
         }
         .grade-kpi .celula {
-            border-right: 1px solid rgba(128, 128, 128, 0.3);
-            border-bottom: 1px solid rgba(128, 128, 128, 0.3);
-            padding: 0.6rem 0.8rem;
+            border: 1px solid var(--linha-sutil);
+            border-top: 2px solid var(--acento-azul);
+            border-radius: 6px;
+            padding: 0.7rem 0.9rem;
+            background-color: var(--secondary-background-color);
+            transition: border-color 0.15s ease;
+        }
+        .grade-kpi .celula:hover {
+            border-color: var(--acento-azul);
         }
         .grade-kpi .celula .rotulo {
             font-size: 0.68rem;
             text-transform: uppercase;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             color: var(--text-color);
             opacity: 0.55;
+            margin-bottom: 0.15rem;
         }
         .grade-kpi .celula .valor {
             font-family: Georgia, serif;
-            font-size: 1.25rem;
+            font-size: 1.35rem;
             color: var(--text-color);
+            line-height: 1.15;
+        }
+        @media (max-width: 900px) {
+            .grade-kpi { grid-template-columns: repeat(2, 1fr); }
         }
 
         /* Botão de informação compacto — empurrado pra baixo do menu nativo do
            Streamlit (Share/⋮) e com cores que se adaptam ao tema claro/escuro */
         div[data-testid="stPopover"] {
-            margin-top: 0.35rem;
+            margin-top: 0.3rem;
         }
         div[data-testid="stPopover"] button {
-            border-radius: 4px;
-            padding: 0.25rem 0.7rem;
+            border-radius: 6px;
+            padding: 0.3rem 0.75rem;
             font-size: 0.8rem;
             color: var(--text-color);
-            border: 1px solid rgba(128, 128, 128, 0.35);
+            border: 1px solid var(--linha-media);
             background-color: var(--secondary-background-color);
+            transition: border-color 0.15s ease, color 0.15s ease;
         }
         div[data-testid="stPopover"] button:hover {
             border-color: var(--acento-azul);
             color: var(--acento-azul);
         }
 
-        /* Abas editoriais — sem pílula, sublinhado fino que engrossa e vira
-           azul na aba ativa, como um índice de jornal */
+        /* Abas editoriais — sublinhado fino que engrossa e vira azul na aba
+           ativa, com transição suave no peso da fonte e na opacidade */
         div[data-baseweb="tab-list"] {
-            gap: 22px;
-            border-bottom: 1px solid rgba(128, 128, 128, 0.3) !important;
+            gap: 24px;
+            border-bottom: 1px solid var(--linha-sutil) !important;
             padding-bottom: 0;
-            margin-bottom: 0.8rem;
+            margin-bottom: 1rem;
         }
         button[data-baseweb="tab"] {
-            font-size: 0.88rem;
+            font-size: 0.89rem;
             font-weight: 400;
-            padding: 0.5rem 0;
+            padding: 0.5rem 0.1rem;
             border-radius: 0 !important;
             background-color: transparent;
             color: var(--text-color);
-            opacity: 0.6;
+            opacity: 0.58;
+            transition: opacity 0.15s ease, color 0.15s ease;
         }
         button[data-baseweb="tab"]:hover {
-            opacity: 1;
+            opacity: 0.9;
         }
         button[data-baseweb="tab"][aria-selected="true"] {
             color: var(--acento-azul);
+            font-weight: 500;
             opacity: 1;
         }
         div[data-baseweb="tab-highlight"] {
@@ -191,9 +227,9 @@ st.markdown(
         div[data-testid="stMetric"] {
             background-color: transparent;
             border: none;
-            border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+            border-bottom: 1px solid var(--linha-sutil);
             border-radius: 0;
-            padding: 0.4rem 0.2rem;
+            padding: 0.45rem 0.2rem;
         }
         div[data-testid="stMetricValue"] {
             font-family: Georgia, serif;
@@ -205,30 +241,56 @@ st.markdown(
             letter-spacing: 0.04em;
         }
 
+        /* Painel de filtros — envolve os controles num cartão discreto para
+           separar visualmente do conteúdo principal (mapa, gráficos etc.) */
+        .cartao-filtros {
+            border: 1px solid var(--linha-sutil);
+            border-radius: 8px;
+            padding: 1rem 1.1rem 1.15rem 1.1rem;
+            background-color: var(--secondary-background-color);
+        }
+        .cartao-filtros .titulo {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            font-weight: 600;
+            color: var(--acento-azul);
+            margin-bottom: 0.7rem;
+        }
+        /* Alinha o container nativo do Streamlit (st.container(border=True)) ao
+           friso azul usado nos cartões de KPI, dando unidade ao conjunto */
+        div[data-testid="stVerticalBlockBorderWrapper"]:has(.cartao-filtros) {
+            border-radius: 8px !important;
+            border-top: 2px solid var(--acento-azul) !important;
+        }
+
         /* Cartão de destaque — para o número mais importante de cada aba,
-           ex.: "Bairros no filtro atual" */
+           ex.: "Bairros no filtro atual". Cantos e proporções alinhados aos
+           demais cartões (KPIs e filtros) para dar unidade visual ao layout */
         .cartao-destaque {
             background-color: var(--acento-azul);
-            border-radius: 4px;
-            padding: 0.9rem 1.1rem;
+            border-radius: 8px;
+            padding: 0.85rem 1.1rem;
             text-align: center;
-            margin-top: 0.6rem;
+            margin-top: 0.9rem;
         }
         .cartao-destaque .rotulo {
-            color: rgba(255, 255, 255, 0.75);
-            font-size: 0.78rem;
-            margin-bottom: 0.1rem;
+            color: rgba(255, 255, 255, 0.78);
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.15rem;
         }
         .cartao-destaque .valor {
             color: #FFFFFF;
             font-family: Georgia, serif;
-            font-size: 1.7rem;
+            font-size: 1.8rem;
             line-height: 1.1;
         }
 
         hr {
-            margin: 1.6rem 0;
-            border-color: rgba(128, 128, 128, 0.25);
+            margin: 1.5rem 0;
+            border-color: var(--linha-sutil);
         }
     </style>
     """,
@@ -958,6 +1020,7 @@ col_titulo, col_info = st.columns([8, 1], vertical_alignment="bottom")
 with col_titulo:
     st.markdown(
         '<div class="cabecalho-app">'
+        '<div class="selo">Análise de dados · Rio de Janeiro</div>'
         "<h1>Análise Espacial — Airbnb Rio de Janeiro</h1>"
         "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
         "</div>",
@@ -1019,22 +1082,23 @@ with abas_criadas[0]:
     col_filtros, col_mapa = st.columns([1, 3])
 
     with col_filtros:
-        st.markdown("**Filtros**")
-        preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
-        faixa_preco = st.slider(
-            "Faixa de preço médio do bairro (R$)",
-            min_value=float(np.floor(preco_min)),
-            max_value=float(np.ceil(preco_max)),
-            value=(float(np.floor(preco_min)), float(np.ceil(preco_max))),
-        )
-        mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
-        mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
-        mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
+        with st.container(border=True):
+            st.markdown('<div class="cartao-filtros"><div class="titulo">Filtros</div></div>', unsafe_allow_html=True)
+            preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
+            faixa_preco = st.slider(
+                "Faixa de preço médio do bairro (R$)",
+                min_value=float(np.floor(preco_min)),
+                max_value=float(np.ceil(preco_max)),
+                value=(float(np.floor(preco_min)), float(np.ceil(preco_max))),
+            )
+            mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
+            mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
+            mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
 
-        cartao_destaque(
-            "Bairros no filtro atual",
-            int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
-        )
+            cartao_destaque(
+                "Bairros no filtro atual",
+                int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
+            )
 
     agg_filtrado = agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])]
     if not mostrar_populares:
