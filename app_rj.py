@@ -93,19 +93,99 @@ st.markdown(
             max-width: 1300px;
         }
 
-        /* Cabeçalho — título + botão de informação alinhados */
+        /* Cabeçalho — título serifado (toque editorial) + botão de informação */
         .cabecalho-app h1 {
-            font-size: 2.05rem;
-            font-weight: 700;
-            letter-spacing: -0.02em;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 2.0rem;
+            font-weight: 400;
+            letter-spacing: -0.01em;
             margin-bottom: 0.15rem;
             color: var(--text-color);
+            border-bottom: 2px solid var(--text-color);
+            padding-bottom: 0.5rem;
         }
         .cabecalho-app p {
             color: var(--text-color);
             opacity: 0.65;
-            font-size: 0.95rem;
-            margin-top: 0;
+            font-size: 0.9rem;
+            margin-top: 0.4rem;
+        }
+
+        /* Rail de navegação — sidebar vira uma trilha estreita de ícones/rótulos */
+        section[data-testid="stSidebar"] {
+            min-width: 230px !important;
+            max-width: 230px !important;
+            border-right: 1px solid rgba(128, 128, 128, 0.25);
+        }
+        .rail-marca {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            background-color: var(--acento-coral);
+            color: #FFFFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: Georgia, serif;
+            font-size: 0.85rem;
+            margin: 0.2rem 0 1.1rem;
+        }
+        section[data-testid="stSidebar"] button {
+            justify-content: flex-start !important;
+            border-radius: 8px !important;
+            font-size: 0.85rem;
+            border: none !important;
+        }
+        section[data-testid="stSidebar"] button[kind="primary"] {
+            background-color: var(--acento-teal-suave) !important;
+            color: var(--acento-teal) !important;
+            font-weight: 700 !important;
+        }
+        section[data-testid="stSidebar"] button[kind="secondary"] {
+            background-color: transparent !important;
+            color: var(--text-color) !important;
+            opacity: 0.7;
+        }
+        section[data-testid="stSidebar"] button[kind="secondary"]:hover {
+            opacity: 1;
+            background-color: rgba(128, 128, 128, 0.08) !important;
+        }
+
+        /* Grade estilo "planilha de jornal" para os KPIs — sem cartões soltos,
+           células com fio fino compartilhado entre si */
+        .grade-kpi {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            border-top: 1px solid rgba(128, 128, 128, 0.3);
+            border-left: 1px solid rgba(128, 128, 128, 0.3);
+            margin-bottom: 1rem;
+        }
+        .grade-kpi .celula {
+            border-right: 1px solid rgba(128, 128, 128, 0.3);
+            border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+            padding: 0.6rem 0.8rem;
+        }
+        .grade-kpi .celula .rotulo {
+            font-size: 0.68rem;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--text-color);
+            opacity: 0.55;
+        }
+        .grade-kpi .celula .valor {
+            font-family: Georgia, serif;
+            font-size: 1.25rem;
+            color: var(--text-color);
+        }
+
+        /* Cartão de filtro flutuante sobre o mapa — sombra mais forte pra
+           parecer sobreposto em vez de estar numa coluna ao lado */
+        .cartao-flutuante {
+            background-color: var(--background-color);
+            border: 1px solid rgba(128, 128, 128, 0.3);
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
+            padding: 0.8rem 1rem 0.4rem;
+            margin-bottom: 0.6rem;
         }
 
         /* Botão de informação compacto — empurrado pra baixo do menu nativo do
@@ -967,31 +1047,63 @@ with col_info:
             "bons **e** populares ao mesmo tempo."
         )
 
-aba_mapa, aba_sazonalidade, aba_simulador, aba_avaliacoes, aba_recomendacao, aba_assistente = st.tabs(
-    ["🗺️ Mapa Dinâmico", "📅 Evolução Temporal dos Preços", "🧮 Simulador de Investimento",
-     "📝 Análise de Avaliações", "🎯 Recomendação por Turismo", "🤖 Assistente IA"]
-)
+PAGINAS_NAV = [
+    ("mapa", "🗺️", "Mapa Dinâmico"),
+    ("sazonalidade", "📅", "Evolução Temporal dos Preços"),
+    ("simulador", "🧮", "Simulador de Investimento"),
+    ("avaliacoes", "📝", "Análise de Avaliações"),
+    ("recomendacao", "🎯", "Recomendação por Turismo"),
+    ("assistente", "🤖", "Assistente IA"),
+]
+
+if "pagina_ativa" not in st.session_state:
+    st.session_state.pagina_ativa = "mapa"
+
+with st.sidebar:
+    st.markdown('<div class="rail-marca">RJ</div>', unsafe_allow_html=True)
+    for chave, icone, rotulo in PAGINAS_NAV:
+        ativo = st.session_state.pagina_ativa == chave
+        if st.button(
+            f"{icone}  {rotulo}",
+            key=f"nav_{chave}",
+            use_container_width=True,
+            type="primary" if ativo else "secondary",
+        ):
+            st.session_state.pagina_ativa = chave
+            st.rerun()
+
+pagina_ativa = st.session_state.pagina_ativa
 
 # ---------------------------------------------------------------------------
 # ABA 1 — MAPA DINÂMICO
 # ---------------------------------------------------------------------------
-with aba_mapa:
+if pagina_ativa == "mapa":
     st.subheader("Mapa por bairro: luxo, rentabilidade, ocupação e turismo")
 
     # Linha de KPIs gerais do dataset completo (não muda com o filtro de preço,
-    # dá o panorama da cidade antes de entrar no recorte específico)
-    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-    kpi1.metric("Bairros mapeados", int(agg.shape[0]))
-    kpi2.metric("Preço médio (R$)", f"{agg['preco_medio'].mean():,.0f}")
-    kpi3.metric("Score de luxo médio", f"{agg['score_luxo_medio'].mean():.2f}")
-    kpi4.metric("Ocupação média", f"{agg['taxa_ocupacao_media'].mean():.0%}")
+    # dá o panorama da cidade antes de entrar no recorte específico) — em
+    # formato de grade com fio fino, como uma tabela de jornal
+    st.markdown(
+        '<div class="grade-kpi">'
+        f'<div class="celula"><div class="rotulo">Bairros mapeados</div>'
+        f'<div class="valor">{int(agg.shape[0])}</div></div>'
+        f'<div class="celula"><div class="rotulo">Preço médio</div>'
+        f'<div class="valor">R$ {agg["preco_medio"].mean():,.0f}</div></div>'
+        f'<div class="celula"><div class="rotulo">Score de luxo médio</div>'
+        f'<div class="valor">{agg["score_luxo_medio"].mean():.2f}</div></div>'
+        f'<div class="celula"><div class="rotulo">Ocupação média</div>'
+        f'<div class="valor">{agg["taxa_ocupacao_media"].mean():.0%}</div></div>'
+        "</div>",
+        unsafe_allow_html=True,
+    )
 
-    st.write("")
-    col_filtros, col_mapa = st.columns([1, 3])
+    # Coluna de filtro estreita — o mapa ocupa a maior parte da largura, e o
+    # cartão de filtro/destaque ganha sombra forte pra parecer sobreposto a ele
+    col_filtros, col_mapa = st.columns([1, 4])
 
     with col_filtros:
-        st.markdown('<div class="cartao-filtros">', unsafe_allow_html=True)
-        st.markdown("<p>Filtros</p>", unsafe_allow_html=True)
+        st.markdown('<div class="cartao-flutuante">', unsafe_allow_html=True)
+        st.markdown("**Filtros**")
         preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
         faixa_preco = st.slider(
             "Faixa de preço médio do bairro (R$)",
@@ -1004,10 +1116,12 @@ with aba_mapa:
         mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
         st.markdown("</div>", unsafe_allow_html=True)
 
+        st.markdown('<div class="cartao-flutuante">', unsafe_allow_html=True)
         cartao_destaque(
             "Bairros no filtro atual",
             int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
         )
+        st.markdown("</div>", unsafe_allow_html=True)
 
     agg_filtrado = agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])]
     if not mostrar_populares:
@@ -1104,7 +1218,7 @@ with aba_mapa:
 # ---------------------------------------------------------------------------
 # ABA 2 — SAZONALIDADE
 # ---------------------------------------------------------------------------
-with aba_sazonalidade:
+if pagina_ativa == "sazonalidade":
     if calendario is None or temporal is None:
         st.warning(
             "Esta aba precisa dos arquivos `calendar_agregado.parquet` e `listings_temporal.parquet` "
@@ -1285,7 +1399,7 @@ with aba_sazonalidade:
 # ---------------------------------------------------------------------------
 # ABA 3 — SIMULADOR DE INVESTIMENTO
 # ---------------------------------------------------------------------------
-with aba_simulador:
+if pagina_ativa == "simulador":
     st.subheader("Simulador de Preço, Ocupação e Rentabilidade")
     st.caption(
         "Informe as características de um imóvel e receba uma estimativa de preço de diária, "
@@ -1603,12 +1717,11 @@ with aba_simulador:
 
 # ---------------------------------------------------------------------------
 # ABA 4 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
-# Esta aba já era declarada em st.tabs() mas não tinha bloco `with aba_avaliacoes:`
-# — ficava vazia. Se o dataset tiver sub-notas por aspecto (limpeza, comunicação,
+# Página de avaliações — usa sub-notas por aspecto (limpeza, comunicação,
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
 # indicadores de engajamento já calculados em criar_variaveis_avaliacoes().
 # ---------------------------------------------------------------------------
-with aba_avaliacoes:
+if pagina_ativa == "avaliacoes":
     st.subheader("📝 Pontos fortes e fracos das hospedagens")
     st.caption(
         "Usa as sub-notas de avaliação (limpeza, comunicação, localização etc.), quando "
@@ -1769,7 +1882,7 @@ with aba_avaliacoes:
 # ---------------------------------------------------------------------------
 # ABA 5 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
 # ---------------------------------------------------------------------------
-with aba_recomendacao:
+if pagina_ativa == "recomendacao":
     st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
     st.caption(
         "Escolha um ou mais pontos turísticos e o app calcula, para cada anúncio real do "
@@ -1927,7 +2040,7 @@ with aba_recomendacao:
 # injetado no system prompt para que a assistente também consiga responder
 # perguntas sobre os dados carregados no app.
 # ---------------------------------------------------------------------------
-with aba_assistente:
+if pagina_ativa == "assistente":
     st.subheader("🤖 Assistente IA")
     st.caption(
         "Converse livremente ou pergunte sobre os dados deste app (bairros, preços, "
