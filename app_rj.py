@@ -9,7 +9,7 @@ seis abas:
   3. Simulador de Investimento — previsão de preço, ocupação e rentabilidade
   4. Análise de Avaliações — pontos fortes e fracos por bairro e anúncio
   5. Recomendação por Turismo — melhores anúncios perto de pontos de interesse
-  6. Assistente IA — perguntas em linguagem natural sobre os dados
+  6. VANDER IA 1.0 — assistente de IA para perguntas em linguagem natural sobre os dados
 """
 
 import os
@@ -67,9 +67,10 @@ try:
 except ImportError:
     ANTHROPIC_DISPONIVEL = False
 
+_caminho_icone = os.path.join(os.path.dirname(__file__), "assets", "vander_ia_logo.png")
 st.set_page_config(
     page_title="Airbnb Rio de Janeiro — Análise Espacial",
-    page_icon="🏠",
+    page_icon=_caminho_icone if os.path.exists(_caminho_icone) else "🏠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -309,6 +310,8 @@ def cartao_destaque(rotulo, valor):
     )
 
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
+PASTA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
+LOGO_VANDER_IA = os.path.join(PASTA_ASSETS, "vander_ia_logo.png")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
@@ -1051,7 +1054,7 @@ PAGINAS_NAV = [
     ("simulador", "🧮 Simulador de Investimento"),
     ("avaliacoes", "📝 Análise de Avaliações"),
     ("recomendacao", "🎯 Recomendação por Turismo"),
-    ("assistente", "🤖 Assistente IA"),
+    ("assistente", "🤖 VANDER IA"),
 ]
 
 abas_criadas = st.tabs([rotulo for _, rotulo in PAGINAS_NAV])
@@ -2018,10 +2021,23 @@ with abas_criadas[4]:
 # perguntas sobre os dados carregados no app.
 # ---------------------------------------------------------------------------
 with abas_criadas[5]:
-    st.subheader("🤖 Assistente IA")
+    col_logo, col_titulo_ia = st.columns([1, 6], vertical_alignment="center")
+    with col_logo:
+        if os.path.exists(LOGO_VANDER_IA):
+            st.image(LOGO_VANDER_IA, use_container_width=True)
+    with col_titulo_ia:
+        st.markdown(
+            '<div style="font-family: Georgia, serif; font-size: 1.5rem; '
+            'margin-bottom: 0.1rem;">VANDER IA <span style="font-size: 1rem; '
+            'opacity: 0.6;">1.0</span></div>'
+            '<div style="font-size: 0.8rem; color: var(--acento-azul); '
+            'text-transform: uppercase; letter-spacing: 0.05em;">'
+            "Inteligência que transforma</div>",
+            unsafe_allow_html=True,
+        )
     st.caption(
         "Converse livremente ou pergunte sobre os dados deste app (bairros, preços, "
-        "rentabilidade, avaliações etc.). A assistente tem acesso a um resumo do dataset "
+        "rentabilidade, avaliações etc.). A VANDER IA tem acesso a um resumo do dataset "
         "carregado, mas não aos filtros que você aplicou nas outras abas."
     )
 
@@ -2044,12 +2060,15 @@ with abas_criadas[5]:
         contexto_dados = montar_contexto_dados(df, agg)
 
         system_prompt = (
-            "Você é a assistente de IA embutida em um app Streamlit de análise do mercado "
-            "de Airbnb no Rio de Janeiro. Responda em português do Brasil, de forma direta "
-            "e objetiva. Use o resumo de dados abaixo quando a pergunta for sobre o "
-            "dataset; para perguntas gerais, responda normalmente sem forçar o contexto.\n\n"
+            "Você é a VANDER IA 1.0, a assistente de IA embutida em um app Streamlit de "
+            "análise do mercado de Airbnb no Rio de Janeiro. Seu lema é 'Inteligência que "
+            "transforma'. Responda em português do Brasil, de forma direta e objetiva. Use "
+            "o resumo de dados abaixo quando a pergunta for sobre o dataset; para perguntas "
+            "gerais, responda normalmente sem forçar o contexto.\n\n"
             f"### Resumo do dataset carregado\n{contexto_dados}"
         )
+
+        avatar_assistente = LOGO_VANDER_IA if os.path.exists(LOGO_VANDER_IA) else "🤖"
 
         if "mensagens_assistente" not in st.session_state:
             st.session_state.mensagens_assistente = []
@@ -2061,7 +2080,8 @@ with abas_criadas[5]:
                 st.rerun()
 
         for msg in st.session_state.mensagens_assistente:
-            with st.chat_message(msg["role"]):
+            avatar_msg = avatar_assistente if msg["role"] == "assistant" else None
+            with st.chat_message(msg["role"], avatar=avatar_msg):
                 st.markdown(msg["content"])
 
         pergunta = st.chat_input("Pergunte algo sobre os dados ou converse livremente...")
@@ -2070,7 +2090,7 @@ with abas_criadas[5]:
             with st.chat_message("user"):
                 st.markdown(pergunta)
 
-            with st.chat_message("assistant"):
+            with st.chat_message("assistant", avatar=avatar_assistente):
                 placeholder = st.empty()
                 resposta_completa = ""
                 try:
