@@ -92,26 +92,31 @@ st.markdown(
             font-weight: 700;
             letter-spacing: -0.02em;
             margin-bottom: 0.15rem;
-            color: #1b1b1f;
+            color: var(--text-color);
         }
         .cabecalho-app p {
-            color: #6b7280;
+            color: var(--text-color);
+            opacity: 0.65;
             font-size: 0.95rem;
             margin-top: 0;
         }
 
-        /* Botão de informação compacto, no canto superior direito */
+        /* Botão de informação compacto — empurrado pra baixo do menu nativo do
+           Streamlit (Share/⋮) e com cores que se adaptam ao tema claro/escuro */
+        div[data-testid="stPopover"] {
+            margin-top: 0.35rem;
+        }
         div[data-testid="stPopover"] button {
             border-radius: 999px;
             padding: 0.25rem 0.7rem;
             font-size: 0.8rem;
-            color: #4b5563;
-            border: 1px solid #e5e7eb;
-            background-color: #fafafa;
+            color: var(--text-color);
+            border: 1px solid rgba(128, 128, 128, 0.35);
+            background-color: var(--secondary-background-color);
         }
         div[data-testid="stPopover"] button:hover {
-            border-color: #9ca3af;
-            color: #111827;
+            border-color: var(--primary-color);
+            color: var(--primary-color);
         }
 
         /* Abas — mais espaçadas e com destaque suave na aba ativa */
@@ -121,25 +126,26 @@ st.markdown(
             padding: 0.5rem 1rem;
         }
         button[data-baseweb="tab"][aria-selected="true"] {
-            color: #d92b4b;
+            color: var(--primary-color);
         }
         div[data-baseweb="tab-highlight"] {
-            background-color: #d92b4b;
+            background-color: var(--primary-color);
         }
         div[data-baseweb="tab-border"] {
-            background-color: #eee;
+            background-color: rgba(128, 128, 128, 0.25);
         }
 
-        /* Métricas e cartões com leve sombra */
+        /* Métricas e cartões com leve sombra — adaptados ao tema */
         div[data-testid="stMetric"] {
-            background-color: #fafafa;
-            border: 1px solid #eee;
+            background-color: var(--secondary-background-color);
+            border: 1px solid rgba(128, 128, 128, 0.2);
             border-radius: 10px;
             padding: 0.8rem 1rem;
         }
 
         hr {
             margin: 1.6rem 0;
+            border-color: rgba(128, 128, 128, 0.25);
         }
     </style>
     """,
@@ -854,7 +860,7 @@ pontos_turisticos = buscar_pontos_turisticos()
 agg = adicionar_distancia_turistica(agg, pontos_turisticos)
 mapa_gdf = gdf.merge(agg, left_on="neighbourhood", right_on="bairro_padronizado", how="left")
 
-col_titulo, col_info = st.columns([8, 1], vertical_alignment="top")
+col_titulo, col_info = st.columns([8, 1], vertical_alignment="bottom")
 with col_titulo:
     st.markdown(
         '<div class="cabecalho-app">'
