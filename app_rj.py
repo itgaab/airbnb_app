@@ -80,6 +80,13 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+        :root {
+            --acento-teal: #1B6F63;
+            --acento-teal-suave: rgba(27, 111, 99, 0.12);
+            --acento-coral: #C77A3E;
+            --acento-coral-suave: rgba(199, 122, 62, 0.14);
+        }
+
         .block-container {
             padding-top: 1.6rem;
             padding-bottom: 2.5rem;
@@ -115,32 +122,94 @@ st.markdown(
             background-color: var(--secondary-background-color);
         }
         div[data-testid="stPopover"] button:hover {
-            border-color: var(--primary-color);
-            color: var(--primary-color);
+            border-color: var(--acento-teal);
+            color: var(--acento-teal);
         }
 
-        /* Abas — mais espaçadas e com destaque suave na aba ativa */
+        /* Abas em formato de pílula — cada aba vira um "chip", a ativa ganha
+           preenchimento sólido em vez de apenas um sublinhado */
+        div[data-baseweb="tab-list"] {
+            gap: 6px;
+            border-bottom: none !important;
+            padding-bottom: 0.6rem;
+            margin-bottom: 0.4rem;
+        }
         button[data-baseweb="tab"] {
-            font-size: 0.95rem;
+            font-size: 0.88rem;
             font-weight: 600;
-            padding: 0.5rem 1rem;
+            padding: 0.45rem 1rem;
+            border-radius: 999px !important;
+            background-color: var(--secondary-background-color);
+            color: var(--text-color);
+            opacity: 0.7;
+            transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+        }
+        button[data-baseweb="tab"]:hover {
+            opacity: 1;
+            background-color: var(--acento-teal-suave);
         }
         button[data-baseweb="tab"][aria-selected="true"] {
-            color: var(--primary-color);
+            background-color: var(--acento-teal);
+            color: #FFFFFF;
+            opacity: 1;
         }
         div[data-baseweb="tab-highlight"] {
-            background-color: var(--primary-color);
+            background-color: transparent;
         }
         div[data-baseweb="tab-border"] {
-            background-color: rgba(128, 128, 128, 0.25);
+            background-color: transparent;
         }
 
-        /* Métricas e cartões com leve sombra — adaptados ao tema */
+        /* Métricas — cartões elevados, levemente arredondados, com acento
+           sutil na borda esquerda para lembrar um indicador de KPI */
         div[data-testid="stMetric"] {
             background-color: var(--secondary-background-color);
-            border: 1px solid rgba(128, 128, 128, 0.2);
+            border: 1px solid rgba(128, 128, 128, 0.18);
+            border-left: 3px solid var(--acento-teal);
             border-radius: 10px;
             padding: 0.8rem 1rem;
+        }
+        div[data-testid="stMetricLabel"] {
+            opacity: 0.7;
+        }
+
+        /* Cartão de filtros — agrupa a barra lateral de cada aba num bloco
+           com fundo e borda próprios, em vez de controles soltos */
+        .cartao-filtros {
+            background-color: var(--secondary-background-color);
+            border: 1px solid rgba(128, 128, 128, 0.18);
+            border-radius: 12px;
+            padding: 1rem 1.1rem 0.6rem;
+            margin-bottom: 0.9rem;
+        }
+        .cartao-filtros p {
+            font-size: 0.8rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--acento-teal);
+            margin-bottom: 0.6rem;
+        }
+
+        /* Cartão de destaque (coral) — para o número mais importante de cada
+           aba, ex.: "Bairros no filtro atual" */
+        .cartao-destaque {
+            background-color: var(--acento-teal);
+            border-radius: 12px;
+            padding: 0.9rem 1.1rem;
+            text-align: center;
+            margin-top: 0.6rem;
+        }
+        .cartao-destaque .rotulo {
+            color: rgba(255, 255, 255, 0.75);
+            font-size: 0.78rem;
+            margin-bottom: 0.1rem;
+        }
+        .cartao-destaque .valor {
+            color: #FFFFFF;
+            font-size: 1.7rem;
+            font-weight: 700;
+            line-height: 1.1;
         }
 
         hr {
@@ -151,6 +220,16 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
+
+
+def cartao_destaque(rotulo, valor):
+    """Renderiza um cartão de destaque (fundo sólido teal) para o número mais
+    importante de uma aba — usado no lugar de um st.metric solto."""
+    st.markdown(
+        f'<div class="cartao-destaque"><div class="rotulo">{rotulo}</div>'
+        f'<div class="valor">{valor}</div></div>',
+        unsafe_allow_html=True,
+    )
 
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
@@ -899,9 +978,20 @@ aba_mapa, aba_sazonalidade, aba_simulador, aba_avaliacoes, aba_recomendacao, aba
 with aba_mapa:
     st.subheader("Mapa por bairro: luxo, rentabilidade, ocupação e turismo")
 
+    # Linha de KPIs gerais do dataset completo (não muda com o filtro de preço,
+    # dá o panorama da cidade antes de entrar no recorte específico)
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    kpi1.metric("Bairros mapeados", int(agg.shape[0]))
+    kpi2.metric("Preço médio (R$)", f"{agg['preco_medio'].mean():,.0f}")
+    kpi3.metric("Score de luxo médio", f"{agg['score_luxo_medio'].mean():.2f}")
+    kpi4.metric("Ocupação média", f"{agg['taxa_ocupacao_media'].mean():.0%}")
+
+    st.write("")
     col_filtros, col_mapa = st.columns([1, 3])
 
     with col_filtros:
+        st.markdown('<div class="cartao-filtros">', unsafe_allow_html=True)
+        st.markdown("<p>Filtros</p>", unsafe_allow_html=True)
         preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
         faixa_preco = st.slider(
             "Faixa de preço médio do bairro (R$)",
@@ -912,9 +1002,12 @@ with aba_mapa:
         mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
         mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
         mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
+        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.metric("Bairros no filtro atual",
-                   int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]))
+        cartao_destaque(
+            "Bairros no filtro atual",
+            int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
+        )
 
     agg_filtrado = agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])]
     if not mostrar_populares:
@@ -1603,87 +1696,6 @@ with aba_avaliacoes:
             f"🟢 Ponto forte geral: **{medias_gerais.index[-1]}** (maior média)."
         )
 
-        st.divider()
-        st.markdown("##### Comparar um bairro com a média da cidade")
-        n_min_anuncios_sub = st.slider(
-            "Mínimo de anúncios por bairro (evita bairros com poucos dados)",
-            1, 30, 5, key="sub_min_anuncios",
-        )
-        contagem_bairro = df.groupby("bairro_padronizado")["id_anuncio"].count()
-        bairros_disponiveis = sorted(
-            contagem_bairro[contagem_bairro >= n_min_anuncios_sub].index.tolist()
-        )
-        if not bairros_disponiveis:
-            st.warning("Nenhum bairro atinge esse mínimo de anúncios — reduza o filtro.")
-        else:
-            bairro_escolhido = st.selectbox("Bairro", bairros_disponiveis)
-
-            media_cidade = df[list(subnotas_disponiveis)].mean()
-            media_bairro = df.loc[
-                df["bairro_padronizado"] == bairro_escolhido, list(subnotas_disponiveis)
-            ].mean()
-            delta = (media_bairro - media_cidade).rename(index=subnotas_disponiveis).sort_values()
-
-            col_rad1, col_rad2 = st.columns(2)
-            with col_rad1:
-                categorias_radar = list(subnotas_disponiveis.values())
-                fig_radar = go.Figure()
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=media_cidade.rename(index=subnotas_disponiveis)[categorias_radar].values,
-                    theta=categorias_radar, fill="toself", name="Cidade (média)",
-                    line_color="#9aa0a6",
-                ))
-                fig_radar.add_trace(go.Scatterpolar(
-                    r=media_bairro.rename(index=subnotas_disponiveis)[categorias_radar].values,
-                    theta=categorias_radar, fill="toself", name=bairro_escolhido,
-                    line_color="#ff6e40",
-                ))
-                fig_radar.update_layout(
-                    title=f"{bairro_escolhido} vs. cidade — por aspecto",
-                    polar=dict(radialaxis=dict(visible=True)),
-                    showlegend=True, legend=dict(orientation="h", y=-0.1),
-                )
-                st.plotly_chart(fig_radar, use_container_width=True)
-
-            with col_rad2:
-                fig_delta = px.bar(
-                    delta, orientation="h",
-                    labels={"value": "Diferença em relação à média da cidade", "index": ""},
-                    title=f"{bairro_escolhido}: acima/abaixo da média (diferença absoluta)",
-                    color=delta.values, color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
-                )
-                fig_delta.update_layout(showlegend=False, coloraxis_showscale=False)
-                st.plotly_chart(fig_delta, use_container_width=True)
-
-            pontos_fracos = delta[delta < -0.05].index.tolist()
-            pontos_fortes = delta[delta > 0.05].index.tolist()
-            col_pf1, col_pf2 = st.columns(2)
-            with col_pf1:
-                st.success(
-                    f"**Pontos fortes:** {', '.join(pontos_fortes) if pontos_fortes else 'nenhum destaque relevante'}"
-                )
-            with col_pf2:
-                st.warning(
-                    f"**Pontos de atenção:** {', '.join(pontos_fracos) if pontos_fracos else 'nenhum problema relevante'}"
-                )
-
-        st.divider()
-        st.markdown("##### O que mais pesa no preço e na ocupação?")
-        colunas_corr = list(subnotas_disponiveis)
-        alvo_disponivel = [c for c in ["preco", "taxa_ocupacao_estimada"] if c in df.columns]
-        if colunas_corr and alvo_disponivel:
-            corr = df[colunas_corr + alvo_disponivel].corr().loc[colunas_corr, alvo_disponivel]
-            corr.index = [subnotas_disponiveis[c] for c in colunas_corr]
-            st.dataframe(
-                corr.style.format("{:.2f}").background_gradient(cmap="RdYlGn", axis=None),
-                use_container_width=True,
-            )
-            st.caption(
-                "Correlação entre cada aspecto avaliado e preço/ocupação. Valores mais "
-                "próximos de 1 (verde) indicam que melhorar aquele aspecto tende a andar "
-                "junto com preços mais altos ou mais ocupação; próximos de -1 (vermelho), "
-                "o oposto — não implica causalidade."
-            )
     else:
         st.info(
             "O dataset de features não traz sub-notas por aspecto (limpeza, comunicação, "
