@@ -81,10 +81,8 @@ st.markdown(
     """
     <style>
         :root {
-            --acento-teal: #1B6F63;
-            --acento-teal-suave: rgba(27, 111, 99, 0.12);
-            --acento-coral: #C77A3E;
-            --acento-coral-suave: rgba(199, 122, 62, 0.14);
+            --acento-azul: #1D5FA5;
+            --acento-azul-suave: rgba(29, 95, 165, 0.10);
         }
 
         .block-container {
@@ -93,7 +91,7 @@ st.markdown(
             max-width: 1300px;
         }
 
-        /* Cabeçalho — título serifado (toque editorial) + botão de informação */
+        /* Cabeçalho — título serifado com régua embaixo, tom editorial */
         .cabecalho-app h1 {
             font-family: Georgia, "Times New Roman", serif;
             font-size: 2.0rem;
@@ -111,48 +109,8 @@ st.markdown(
             margin-top: 0.4rem;
         }
 
-        /* Rail de navegação — sidebar vira uma trilha estreita de ícones/rótulos */
-        section[data-testid="stSidebar"] {
-            min-width: 230px !important;
-            max-width: 230px !important;
-            border-right: 1px solid rgba(128, 128, 128, 0.25);
-        }
-        .rail-marca {
-            width: 34px;
-            height: 34px;
-            border-radius: 8px;
-            background-color: var(--acento-coral);
-            color: #FFFFFF;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-family: Georgia, serif;
-            font-size: 0.85rem;
-            margin: 0.2rem 0 1.1rem;
-        }
-        section[data-testid="stSidebar"] button {
-            justify-content: flex-start !important;
-            border-radius: 8px !important;
-            font-size: 0.85rem;
-            border: none !important;
-        }
-        section[data-testid="stSidebar"] button[kind="primary"] {
-            background-color: var(--acento-teal-suave) !important;
-            color: var(--acento-teal) !important;
-            font-weight: 700 !important;
-        }
-        section[data-testid="stSidebar"] button[kind="secondary"] {
-            background-color: transparent !important;
-            color: var(--text-color) !important;
-            opacity: 0.7;
-        }
-        section[data-testid="stSidebar"] button[kind="secondary"]:hover {
-            opacity: 1;
-            background-color: rgba(128, 128, 128, 0.08) !important;
-        }
-
-        /* Grade estilo "planilha de jornal" para os KPIs — sem cartões soltos,
-           células com fio fino compartilhado entre si */
+        /* Grade estilo "planilha de jornal" para os KPIs — células com fio
+           fino compartilhado entre si, em vez de cartões soltos */
         .grade-kpi {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
@@ -178,23 +136,13 @@ st.markdown(
             color: var(--text-color);
         }
 
-        /* Cartão de filtro flutuante sobre o mapa — sombra mais forte pra
-           parecer sobreposto em vez de estar numa coluna ao lado */
-        .cartao-flutuante {
-            background-color: var(--background-color);
-            border: 1px solid rgba(128, 128, 128, 0.3);
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
-            padding: 0.8rem 1rem 0.4rem;
-            margin-bottom: 0.6rem;
-        }
-
         /* Botão de informação compacto — empurrado pra baixo do menu nativo do
            Streamlit (Share/⋮) e com cores que se adaptam ao tema claro/escuro */
         div[data-testid="stPopover"] {
             margin-top: 0.35rem;
         }
         div[data-testid="stPopover"] button {
-            border-radius: 999px;
+            border-radius: 4px;
             padding: 0.25rem 0.7rem;
             font-size: 0.8rem;
             color: var(--text-color);
@@ -202,80 +150,66 @@ st.markdown(
             background-color: var(--secondary-background-color);
         }
         div[data-testid="stPopover"] button:hover {
-            border-color: var(--acento-teal);
-            color: var(--acento-teal);
+            border-color: var(--acento-azul);
+            color: var(--acento-azul);
         }
 
-        /* Abas em formato de pílula — cada aba vira um "chip", a ativa ganha
-           preenchimento sólido em vez de apenas um sublinhado */
+        /* Abas editoriais — sem pílula, sublinhado fino que engrossa e vira
+           azul na aba ativa, como um índice de jornal */
         div[data-baseweb="tab-list"] {
-            gap: 6px;
-            border-bottom: none !important;
-            padding-bottom: 0.6rem;
-            margin-bottom: 0.4rem;
+            gap: 22px;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.3) !important;
+            padding-bottom: 0;
+            margin-bottom: 0.8rem;
         }
         button[data-baseweb="tab"] {
             font-size: 0.88rem;
-            font-weight: 600;
-            padding: 0.45rem 1rem;
-            border-radius: 999px !important;
-            background-color: var(--secondary-background-color);
+            font-weight: 400;
+            padding: 0.5rem 0;
+            border-radius: 0 !important;
+            background-color: transparent;
             color: var(--text-color);
-            opacity: 0.7;
-            transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+            opacity: 0.6;
         }
         button[data-baseweb="tab"]:hover {
             opacity: 1;
-            background-color: var(--acento-teal-suave);
         }
         button[data-baseweb="tab"][aria-selected="true"] {
-            background-color: var(--acento-teal);
-            color: #FFFFFF;
+            color: var(--acento-azul);
             opacity: 1;
         }
         div[data-baseweb="tab-highlight"] {
-            background-color: transparent;
+            background-color: var(--acento-azul);
+            height: 2px;
         }
         div[data-baseweb="tab-border"] {
             background-color: transparent;
         }
 
-        /* Métricas — cartões elevados, levemente arredondados, com acento
-           sutil na borda esquerda para lembrar um indicador de KPI */
+        /* Métricas — sóbrias, sem cartão, só um fio fino embaixo e o valor
+           em serifada, como uma cifra de tabela financeira */
         div[data-testid="stMetric"] {
-            background-color: var(--secondary-background-color);
-            border: 1px solid rgba(128, 128, 128, 0.18);
-            border-left: 3px solid var(--acento-teal);
-            border-radius: 10px;
-            padding: 0.8rem 1rem;
+            background-color: transparent;
+            border: none;
+            border-bottom: 1px solid rgba(128, 128, 128, 0.3);
+            border-radius: 0;
+            padding: 0.4rem 0.2rem;
+        }
+        div[data-testid="stMetricValue"] {
+            font-family: Georgia, serif;
         }
         div[data-testid="stMetricLabel"] {
-            opacity: 0.7;
-        }
-
-        /* Cartão de filtros — agrupa a barra lateral de cada aba num bloco
-           com fundo e borda próprios, em vez de controles soltos */
-        .cartao-filtros {
-            background-color: var(--secondary-background-color);
-            border: 1px solid rgba(128, 128, 128, 0.18);
-            border-radius: 12px;
-            padding: 1rem 1.1rem 0.6rem;
-            margin-bottom: 0.9rem;
-        }
-        .cartao-filtros p {
-            font-size: 0.8rem;
-            font-weight: 600;
+            opacity: 0.6;
+            font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            color: var(--acento-teal);
-            margin-bottom: 0.6rem;
         }
 
-        /* Cartão de destaque (coral) — para o número mais importante de cada
-           aba, ex.: "Bairros no filtro atual" */
+        /* Cartão de destaque — para o número mais importante de cada aba,
+           ex.: "Bairros no filtro atual" */
         .cartao-destaque {
-            background-color: var(--acento-teal);
-            border-radius: 12px;
+            background-color: var(--acento-azul);
+            border-radius: 4px;
             padding: 0.9rem 1.1rem;
             text-align: center;
             margin-top: 0.6rem;
@@ -287,8 +221,8 @@ st.markdown(
         }
         .cartao-destaque .valor {
             color: #FFFFFF;
+            font-family: Georgia, serif;
             font-size: 1.7rem;
-            font-weight: 700;
             line-height: 1.1;
         }
 
@@ -303,7 +237,8 @@ st.markdown(
 
 
 def cartao_destaque(rotulo, valor):
-    """Renderiza um cartão de destaque (fundo sólido teal) para o número mais
+    """Renderiza um cartão de destaque (fundo sólido azul) para o número mais
+
     importante de uma aba — usado no lugar de um st.metric solto."""
     st.markdown(
         f'<div class="cartao-destaque"><div class="rotulo">{rotulo}</div>'
@@ -1048,36 +983,20 @@ with col_info:
         )
 
 PAGINAS_NAV = [
-    ("mapa", "🗺️", "Mapa Dinâmico"),
-    ("sazonalidade", "📅", "Evolução Temporal dos Preços"),
-    ("simulador", "🧮", "Simulador de Investimento"),
-    ("avaliacoes", "📝", "Análise de Avaliações"),
-    ("recomendacao", "🎯", "Recomendação por Turismo"),
-    ("assistente", "🤖", "Assistente IA"),
+    ("mapa", "🗺️ Mapa Dinâmico"),
+    ("sazonalidade", "📅 Evolução Temporal dos Preços"),
+    ("simulador", "🧮 Simulador de Investimento"),
+    ("avaliacoes", "📝 Análise de Avaliações"),
+    ("recomendacao", "🎯 Recomendação por Turismo"),
+    ("assistente", "🤖 Assistente IA"),
 ]
 
-if "pagina_ativa" not in st.session_state:
-    st.session_state.pagina_ativa = "mapa"
-
-with st.sidebar:
-    st.markdown('<div class="rail-marca">RJ</div>', unsafe_allow_html=True)
-    for chave, icone, rotulo in PAGINAS_NAV:
-        ativo = st.session_state.pagina_ativa == chave
-        if st.button(
-            f"{icone}  {rotulo}",
-            key=f"nav_{chave}",
-            use_container_width=True,
-            type="primary" if ativo else "secondary",
-        ):
-            st.session_state.pagina_ativa = chave
-            st.rerun()
-
-pagina_ativa = st.session_state.pagina_ativa
+abas_criadas = st.tabs([rotulo for _, rotulo in PAGINAS_NAV])
 
 # ---------------------------------------------------------------------------
 # ABA 1 — MAPA DINÂMICO
 # ---------------------------------------------------------------------------
-if pagina_ativa == "mapa":
+with abas_criadas[0]:
     st.subheader("Mapa por bairro: luxo, rentabilidade, ocupação e turismo")
 
     # Linha de KPIs gerais do dataset completo (não muda com o filtro de preço,
@@ -1097,12 +1016,9 @@ if pagina_ativa == "mapa":
         unsafe_allow_html=True,
     )
 
-    # Coluna de filtro estreita — o mapa ocupa a maior parte da largura, e o
-    # cartão de filtro/destaque ganha sombra forte pra parecer sobreposto a ele
-    col_filtros, col_mapa = st.columns([1, 4])
+    col_filtros, col_mapa = st.columns([1, 3])
 
     with col_filtros:
-        st.markdown('<div class="cartao-flutuante">', unsafe_allow_html=True)
         st.markdown("**Filtros**")
         preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
         faixa_preco = st.slider(
@@ -1114,14 +1030,11 @@ if pagina_ativa == "mapa":
         mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
         mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
         mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
-        st.markdown("</div>", unsafe_allow_html=True)
 
-        st.markdown('<div class="cartao-flutuante">', unsafe_allow_html=True)
         cartao_destaque(
             "Bairros no filtro atual",
             int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
         )
-        st.markdown("</div>", unsafe_allow_html=True)
 
     agg_filtrado = agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])]
     if not mostrar_populares:
@@ -1218,7 +1131,7 @@ if pagina_ativa == "mapa":
 # ---------------------------------------------------------------------------
 # ABA 2 — SAZONALIDADE
 # ---------------------------------------------------------------------------
-if pagina_ativa == "sazonalidade":
+with abas_criadas[1]:
     if calendario is None or temporal is None:
         st.warning(
             "Esta aba precisa dos arquivos `calendar_agregado.parquet` e `listings_temporal.parquet` "
@@ -1399,7 +1312,7 @@ if pagina_ativa == "sazonalidade":
 # ---------------------------------------------------------------------------
 # ABA 3 — SIMULADOR DE INVESTIMENTO
 # ---------------------------------------------------------------------------
-if pagina_ativa == "simulador":
+with abas_criadas[2]:
     st.subheader("Simulador de Preço, Ocupação e Rentabilidade")
     st.caption(
         "Informe as características de um imóvel e receba uma estimativa de preço de diária, "
@@ -1721,7 +1634,7 @@ if pagina_ativa == "simulador":
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
 # indicadores de engajamento já calculados em criar_variaveis_avaliacoes().
 # ---------------------------------------------------------------------------
-if pagina_ativa == "avaliacoes":
+with abas_criadas[3]:
     st.subheader("📝 Pontos fortes e fracos das hospedagens")
     st.caption(
         "Usa as sub-notas de avaliação (limpeza, comunicação, localização etc.), quando "
@@ -1882,7 +1795,7 @@ if pagina_ativa == "avaliacoes":
 # ---------------------------------------------------------------------------
 # ABA 5 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
 # ---------------------------------------------------------------------------
-if pagina_ativa == "recomendacao":
+with abas_criadas[4]:
     st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
     st.caption(
         "Escolha um ou mais pontos turísticos e o app calcula, para cada anúncio real do "
@@ -2040,7 +1953,7 @@ if pagina_ativa == "recomendacao":
 # injetado no system prompt para que a assistente também consiga responder
 # perguntas sobre os dados carregados no app.
 # ---------------------------------------------------------------------------
-if pagina_ativa == "assistente":
+with abas_criadas[5]:
     st.subheader("🤖 Assistente IA")
     st.caption(
         "Converse livremente ou pergunte sobre os dados deste app (bairros, preços, "
