@@ -7,8 +7,8 @@ seis abas:
   1. Mapa Dinâmico — luxo, rentabilidade, ocupação e turismo por bairro
   2. Evolução Temporal dos Preços — sazonalidade e histórico entre coletas
   3. Simulador de Investimento — previsão de preço, ocupação e rentabilidade
-  4. Recomendação por Turismo — melhores anúncios perto de pontos de interesse
-  5. Análise de Avaliações — pontos fortes e fracos por bairro e anúncio
+  4. Análise de Avaliações — pontos fortes e fracos por bairro e anúncio
+  5. Recomendação por Turismo — melhores anúncios perto de pontos de interesse
   6. Assistente IA — perguntas em linguagem natural sobre os dados
 """
 
@@ -67,11 +67,96 @@ try:
 except ImportError:
     ANTHROPIC_DISPONIVEL = False
 
-st.set_page_config(page_title="Airbnb Rio de Janeiro  Análise Espacial", layout="wide")
+st.set_page_config(
+    page_title="Airbnb Rio de Janeiro — Análise Espacial",
+    page_icon="🏠",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ---------------------------------------------------------------------------
+# Estilo — layout mais elegante (tipografia, espaçamento, abas e cartões)
+# ---------------------------------------------------------------------------
+st.markdown(
+    """
+    <style>
+        .block-container {
+            padding-top: 1.6rem;
+            padding-bottom: 2.5rem;
+            max-width: 1300px;
+        }
+
+        /* Cabeçalho — título + botão de informação alinhados */
+        .cabecalho-app h1 {
+            font-size: 2.05rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.15rem;
+            color: #1b1b1f;
+        }
+        .cabecalho-app p {
+            color: #6b7280;
+            font-size: 0.95rem;
+            margin-top: 0;
+        }
+
+        /* Botão de informação compacto, no canto superior direito */
+        div[data-testid="stPopover"] button {
+            border-radius: 999px;
+            padding: 0.25rem 0.7rem;
+            font-size: 0.8rem;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+            background-color: #fafafa;
+        }
+        div[data-testid="stPopover"] button:hover {
+            border-color: #9ca3af;
+            color: #111827;
+        }
+
+        /* Abas — mais espaçadas e com destaque suave na aba ativa */
+        button[data-baseweb="tab"] {
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #d92b4b;
+        }
+        div[data-baseweb="tab-highlight"] {
+            background-color: #d92b4b;
+        }
+        div[data-baseweb="tab-border"] {
+            background-color: #eee;
+        }
+
+        /* Métricas e cartões com leve sombra */
+        div[data-testid="stMetric"] {
+            background-color: #fafafa;
+            border: 1px solid #eee;
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+        }
+
+        hr {
+            margin: 1.6rem 0;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
+
+
+def capitalizar_primeira(texto):
+    """Deixa a primeira letra maiúscula sem mexer no resto do texto (usado como
+    format_func em campos cujas opções vêm cruas do dataset, ex.: tipo_quarto)."""
+    if isinstance(texto, str) and texto:
+        return texto[0].upper() + texto[1:]
+    return texto
 
 
 # ---------------------------------------------------------------------------
@@ -769,30 +854,37 @@ pontos_turisticos = buscar_pontos_turisticos()
 agg = adicionar_distancia_turistica(agg, pontos_turisticos)
 mapa_gdf = gdf.merge(agg, left_on="neighbourhood", right_on="bairro_padronizado", how="left")
 
-st.title(" Análise Espacial  Airbnb Rio de Janeiro")
-st.caption("Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.")
-
-with st.expander("ℹ️ Como classificamos perfil do anfitrião, faixa de preço e avaliações"):
+col_titulo, col_info = st.columns([8, 1], vertical_alignment="top")
+with col_titulo:
     st.markdown(
-        "**Perfil do anfitrião** — 1) `Superanfitrião` se tiver o selo oficial do Airbnb; "
-        "2) senão, `Profissional (4+ imóveis)` se administra 4 ou mais anúncios; "
-        "3) `Recorrente (2-3 imóveis)`; 4) `Iniciante (1 imóvel)`. O selo tem prioridade "
-        "porque já é um critério oficial (nota alta + baixo cancelamento + resposta rápida).\n\n"
-        f"**Faixa de preço controlada** — para não deixar diárias muito fora da curva "
-        f"(≥ R$ {df['preco_teto_outlier'].iloc[0]:,.0f}, percentil 99) distorcerem a escala "
-        "de cor do mapa e os filtros, essas diárias caem numa faixa própria "
-        "`Outlier (fora da curva)`. As demais são cortadas em quartis do preço 'normal' "
-        "(Econômico / Médio / Alto / Premium).\n\n"
-        "**Variáveis de avaliação** — `qualidade_percebida` usa as faixas de nota do próprio "
-        "critério de superanfitrião (< 4,0 / 4,0–4,7 / ≥ 4,8); `nivel_atividade_avaliacoes` "
-        "usa tercis de avaliações/mês (só entre quem já recebeu avaliação); "
-        "`indice_engajamento` = nota composta × avaliações por mês, pra rankear anúncios "
-        "bons **e** populares ao mesmo tempo."
+        '<div class="cabecalho-app">'
+        "<h1>Análise Espacial — Airbnb Rio de Janeiro</h1>"
+        "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
+        "</div>",
+        unsafe_allow_html=True,
     )
+with col_info:
+    with st.popover("ℹ️ Info", use_container_width=True):
+        st.markdown(
+            "**Perfil do anfitrião** — 1) `Superanfitrião` se tiver o selo oficial do Airbnb; "
+            "2) senão, `Profissional (4+ imóveis)` se administra 4 ou mais anúncios; "
+            "3) `Recorrente (2-3 imóveis)`; 4) `Iniciante (1 imóvel)`. O selo tem prioridade "
+            "porque já é um critério oficial (nota alta + baixo cancelamento + resposta rápida).\n\n"
+            f"**Faixa de preço controlada** — para não deixar diárias muito fora da curva "
+            f"(≥ R$ {df['preco_teto_outlier'].iloc[0]:,.0f}, percentil 99) distorcerem a escala "
+            "de cor do mapa e os filtros, essas diárias caem numa faixa própria "
+            "`Outlier (fora da curva)`. As demais são cortadas em quartis do preço 'normal' "
+            "(Econômico / Médio / Alto / Premium).\n\n"
+            "**Variáveis de avaliação** — `qualidade_percebida` usa as faixas de nota do próprio "
+            "critério de superanfitrião (< 4,0 / 4,0–4,7 / ≥ 4,8); `nivel_atividade_avaliacoes` "
+            "usa tercis de avaliações/mês (só entre quem já recebeu avaliação); "
+            "`indice_engajamento` = nota composta × avaliações por mês, pra rankear anúncios "
+            "bons **e** populares ao mesmo tempo."
+        )
 
-aba_mapa, aba_sazonalidade, aba_simulador, aba_recomendacao, aba_avaliacoes, aba_assistente = st.tabs(
+aba_mapa, aba_sazonalidade, aba_simulador, aba_avaliacoes, aba_recomendacao, aba_assistente = st.tabs(
     ["🗺️ Mapa Dinâmico", "📅 Evolução Temporal dos Preços", "🧮 Simulador de Investimento",
-     "🎯 Recomendação por Turismo", "📝 Análise de Avaliações", "🤖 Assistente IA"]
+     "📝 Análise de Avaliações", "🎯 Recomendação por Turismo", "🤖 Assistente IA"]
 )
 
 # ---------------------------------------------------------------------------
@@ -1198,14 +1290,14 @@ with aba_simulador:
         col_d, col_e, col_f = st.columns(3)
         with col_d:
             tipo_quarto = st.selectbox("Tipo de quarto", sorted(df["tipo_quarto"].dropna().unique().tolist()),
-                                         key="sim_tipo_quarto")
+                                         format_func=capitalizar_primeira, key="sim_tipo_quarto")
             tipo_propriedade = st.selectbox("Tipo de propriedade",
                                               sorted(df["tipo_propriedade"].dropna().unique().tolist()),
-                                              key="sim_tipo_propriedade")
+                                              format_func=capitalizar_primeira, key="sim_tipo_propriedade")
         with col_e:
             tipo_hospedagem = st.selectbox("Tipo de hospedagem",
                                              sorted(df["tipo_hospedagem"].dropna().unique().tolist()),
-                                             key="sim_tipo_hospedagem")
+                                             format_func=capitalizar_primeira, key="sim_tipo_hospedagem")
             e_superanfitriao = st.selectbox("É superanfitrião?", ["f", "t"],
                                               format_func=lambda x: "Sim" if x == "t" else "Não",
                                               key="sim_e_superanfitriao")
@@ -1341,6 +1433,7 @@ with aba_simulador:
             filtro_tipo_propriedade = st.multiselect(
                 "Filtrar por tipo de propriedade (opcional)",
                 sorted(df["tipo_propriedade"].dropna().unique().tolist()),
+                format_func=capitalizar_primeira,
                 key="busca_filtro_tipo_prop",
             )
         with col_f2:
@@ -1383,8 +1476,9 @@ with aba_simulador:
                 for posicao, (_, linha) in enumerate(top5.iterrows(), start=1):
                     with st.container(border=True):
                         st.markdown(
-                            f"**#{posicao} — {linha.get('bairro_padronizado', 'bairro desconhecido')}** · "
-                            f"{linha.get('tipo_propriedade', '-')} · {linha.get('tipo_quarto', '-')}"
+                            f"**#{posicao} — {linha.get('bairro_padronizado', 'Bairro desconhecido')}** · "
+                            f"{capitalizar_primeira(linha.get('tipo_propriedade', '-'))} · "
+                            f"{capitalizar_primeira(linha.get('tipo_quarto', '-'))}"
                         )
                         cc1, cc2, cc3, cc4 = st.columns(4)
                         if tem_margem_busca:
@@ -1409,161 +1503,7 @@ with aba_simulador:
 
 
 # ---------------------------------------------------------------------------
-# ABA 4 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
-# ---------------------------------------------------------------------------
-with aba_recomendacao:
-    st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
-    st.caption(
-        "Escolha um ou mais pontos turísticos e o app calcula, para cada anúncio real do "
-        "dataset, a distância até o ponto mais próximo dentre os selecionados — e sugere "
-        "as melhores opções considerando também preço e nota."
-    )
-
-    if pontos_turisticos.empty:
-        st.warning(
-            "Nenhum ponto turístico cadastrado no momento. Esta aba fica desabilitada."
-        )
-    else:
-        nomes_pontos = sorted(pontos_turisticos["nome"].dropna().unique().tolist())
-        pontos_escolhidos = st.multiselect(
-            "Pontos turísticos de interesse",
-            nomes_pontos,
-            default=nomes_pontos[:1] if nomes_pontos else [],
-            help="Se escolher mais de um ponto, a distância considerada para cada anúncio "
-                 "é a menor entre ele e qualquer um dos pontos selecionados.",
-        )
-
-        col_r1, col_r2, col_r3 = st.columns(3)
-        with col_r1:
-            raio_max_km = st.slider("Distância máxima aceitável (km)", 0.5, 20.0, 3.0, 0.5)
-        with col_r2:
-            preco_max_rec = st.number_input(
-                "Preço máximo por diária (R$)", min_value=0.0,
-                value=float(df["preco"].quantile(0.9)), step=50.0,
-            )
-        with col_r3:
-            peso_distancia = st.slider(
-                "Peso da proximidade no ranking (0 = só preço/nota, 1 = só distância)",
-                0.0, 1.0, 0.6, 0.1,
-            )
-
-        if not pontos_escolhidos:
-            st.info("Selecione ao menos um ponto turístico para ver as recomendações.")
-        else:
-            subset_pontos = pontos_turisticos[pontos_turisticos["nome"].isin(pontos_escolhidos)].reset_index(drop=True)
-
-            colunas_necessarias_rec = [c for c in ["latitude", "longitude", "preco"] if c in df.columns]
-            base = df.dropna(subset=colunas_necessarias_rec).copy()
-            base["nome_exibicao"] = obter_coluna_nome_anuncio(base)
-
-            # distância mínima de cada anúncio a qualquer um dos pontos selecionados
-            distancias = np.column_stack([
-                haversine_km(base["latitude"].values, base["longitude"].values, pt.lat, pt.lon)
-                for pt in subset_pontos.itertuples()
-            ])
-            base["distancia_km"] = distancias.min(axis=1)
-            base["ponto_mais_proximo"] = subset_pontos["nome"].values[distancias.argmin(axis=1)]
-
-            filtrado = base[
-                (base["distancia_km"] <= raio_max_km) & (base["preco"] <= preco_max_rec)
-            ].copy()
-
-            if filtrado.empty:
-                st.warning(
-                    "Nenhum anúncio atende aos filtros de distância/preço. "
-                    "Tente aumentar o raio ou o preço máximo."
-                )
-            else:
-                def normalizar(serie, inverter=False):
-                    minimo, maximo = serie.min(), serie.max()
-                    if maximo == minimo:
-                        return pd.Series(0.5, index=serie.index)
-                    norm = (serie - minimo) / (maximo - minimo)
-                    return 1 - norm if inverter else norm
-
-                dist_norm = normalizar(filtrado["distancia_km"], inverter=True)  # mais perto = melhor
-                preco_norm = normalizar(filtrado["preco"], inverter=True)        # mais barato = melhor
-                nota_norm = (
-                    normalizar(filtrado["nota_composta"])
-                    if "nota_composta" in filtrado.columns
-                    else pd.Series(0.5, index=filtrado.index)
-                )
-
-                peso_preco_nota = (1 - peso_distancia) / 2
-                filtrado["score_recomendacao"] = (
-                    peso_distancia * dist_norm
-                    + peso_preco_nota * preco_norm
-                    + peso_preco_nota * nota_norm
-                )
-
-                top_n = filtrado.sort_values("score_recomendacao", ascending=False).head(10)
-
-                st.success(
-                    f"{len(filtrado)} anúncios dentro do raio/preço escolhidos — "
-                    "mostrando os 10 melhores pelo score combinado (distância + preço + nota)."
-                )
-
-                for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
-                    with st.container(border=True):
-                        link_anuncio_card = linha.get("listing_url")
-                        link_card_md = (
-                            f"[Ver anúncio no Airbnb]({link_anuncio_card})"
-                            if pd.notna(link_anuncio_card) else "Link indisponível"
-                        )
-                        st.markdown(
-                            f"**#{posicao} — {linha['nome_exibicao']}**\n\n"
-                            f"📍 {linha.get('bairro_padronizado', 'bairro desconhecido')} · "
-                            f"{linha.get('tipo_propriedade', '-')} · {linha.get('tipo_quarto', '-')} · "
-                            f"perto de *{linha['ponto_mais_proximo']}* · {link_card_md}"
-                        )
-                        rc1, rc2, rc3, rc4 = st.columns(4)
-                        rc1.metric("Preço/diária", f"R$ {linha['preco']:.2f}")
-                        rc2.metric("Distância", f"{linha['distancia_km']:.2f} km")
-                        if "nota_composta" in top_n.columns:
-                            rc3.metric("Nota", f"{linha['nota_composta']:.2f}")
-                        rc4.metric("Score", f"{linha['score_recomendacao']:.2f}")
-
-                st.divider()
-                st.markdown("##### 🗺️ Mapa das recomendações")
-                m_rec = folium.Map(
-                    location=[subset_pontos["lat"].mean(), subset_pontos["lon"].mean()],
-                    zoom_start=13, tiles="CartoDB positron",
-                )
-                for pt in subset_pontos.itertuples():
-                    folium.Marker(
-                        location=[pt.lat, pt.lon], popup=pt.nome,
-                        icon=folium.Icon(color="cadetblue", icon="star", prefix="fa"),
-                    ).add_to(m_rec)
-                for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
-                    link_anuncio = linha.get("listing_url")
-                    link_html = (
-                        f'<a href="{link_anuncio}" target="_blank">Ver anúncio no Airbnb</a>'
-                        if pd.notna(link_anuncio) else "Link indisponível"
-                    )
-                    popup_html_rec = (
-                        f"<b>#{posicao}</b><br>"
-                        f"{linha['nome_exibicao']}<br>"
-                        f"R$ {linha['preco']:.2f} / diária<br>"
-                        f"{link_html}"
-                    )
-                    folium.CircleMarker(
-                        location=[linha["latitude"], linha["longitude"]],
-                        radius=8, color="#1e3d59", fill=True, fill_color="#ff6e40",
-                        fill_opacity=0.85,
-                        popup=folium.Popup(popup_html_rec, max_width=250),
-                    ).add_to(m_rec)
-                st_folium(m_rec, width=None, height=500, returned_objects=[])
-
-                st.caption(
-                    "💡 O score combinado normaliza distância, preço e nota entre 0 e 1 "
-                    "dentro do conjunto filtrado, e faz uma média ponderada pelos pesos "
-                    "escolhidos acima. É um ranking relativo aos anúncios que passaram "
-                    "pelos filtros de distância máxima e preço máximo — não um valor absoluto."
-                )
-
-
-# ---------------------------------------------------------------------------
-# ABA 5 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
+# ABA 4 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
 # Esta aba já era declarada em st.tabs() mas não tinha bloco `with aba_avaliacoes:`
 # — ficava vazia. Se o dataset tiver sub-notas por aspecto (limpeza, comunicação,
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
@@ -1806,6 +1746,161 @@ with aba_avaliacoes:
                 "avaliados mas pouco visitados (oportunidade de divulgação); **canto "
                 "inferior direito** = populares mas mal avaliados (risco — vale investigar)."
             )
+
+
+# ---------------------------------------------------------------------------
+# ABA 5 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
+# ---------------------------------------------------------------------------
+with aba_recomendacao:
+    st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
+    st.caption(
+        "Escolha um ou mais pontos turísticos e o app calcula, para cada anúncio real do "
+        "dataset, a distância até o ponto mais próximo dentre os selecionados — e sugere "
+        "as melhores opções considerando também preço e nota."
+    )
+
+    if pontos_turisticos.empty:
+        st.warning(
+            "Nenhum ponto turístico cadastrado no momento. Esta aba fica desabilitada."
+        )
+    else:
+        nomes_pontos = sorted(pontos_turisticos["nome"].dropna().unique().tolist())
+        pontos_escolhidos = st.multiselect(
+            "Pontos turísticos de interesse",
+            nomes_pontos,
+            default=nomes_pontos[:1] if nomes_pontos else [],
+            help="Se escolher mais de um ponto, a distância considerada para cada anúncio "
+                 "é a menor entre ele e qualquer um dos pontos selecionados.",
+        )
+
+        col_r1, col_r2, col_r3 = st.columns(3)
+        with col_r1:
+            raio_max_km = st.slider("Distância máxima aceitável (km)", 0.5, 20.0, 3.0, 0.5)
+        with col_r2:
+            preco_max_rec = st.number_input(
+                "Preço máximo por diária (R$)", min_value=0.0,
+                value=float(df["preco"].quantile(0.9)), step=50.0,
+            )
+        with col_r3:
+            peso_distancia = st.slider(
+                "Peso da proximidade no ranking (0 = só preço/nota, 1 = só distância)",
+                0.0, 1.0, 0.6, 0.1,
+            )
+
+        if not pontos_escolhidos:
+            st.info("Selecione ao menos um ponto turístico para ver as recomendações.")
+        else:
+            subset_pontos = pontos_turisticos[pontos_turisticos["nome"].isin(pontos_escolhidos)].reset_index(drop=True)
+
+            colunas_necessarias_rec = [c for c in ["latitude", "longitude", "preco"] if c in df.columns]
+            base = df.dropna(subset=colunas_necessarias_rec).copy()
+            base["nome_exibicao"] = obter_coluna_nome_anuncio(base)
+
+            # distância mínima de cada anúncio a qualquer um dos pontos selecionados
+            distancias = np.column_stack([
+                haversine_km(base["latitude"].values, base["longitude"].values, pt.lat, pt.lon)
+                for pt in subset_pontos.itertuples()
+            ])
+            base["distancia_km"] = distancias.min(axis=1)
+            base["ponto_mais_proximo"] = subset_pontos["nome"].values[distancias.argmin(axis=1)]
+
+            filtrado = base[
+                (base["distancia_km"] <= raio_max_km) & (base["preco"] <= preco_max_rec)
+            ].copy()
+
+            if filtrado.empty:
+                st.warning(
+                    "Nenhum anúncio atende aos filtros de distância/preço. "
+                    "Tente aumentar o raio ou o preço máximo."
+                )
+            else:
+                def normalizar(serie, inverter=False):
+                    minimo, maximo = serie.min(), serie.max()
+                    if maximo == minimo:
+                        return pd.Series(0.5, index=serie.index)
+                    norm = (serie - minimo) / (maximo - minimo)
+                    return 1 - norm if inverter else norm
+
+                dist_norm = normalizar(filtrado["distancia_km"], inverter=True)  # mais perto = melhor
+                preco_norm = normalizar(filtrado["preco"], inverter=True)        # mais barato = melhor
+                nota_norm = (
+                    normalizar(filtrado["nota_composta"])
+                    if "nota_composta" in filtrado.columns
+                    else pd.Series(0.5, index=filtrado.index)
+                )
+
+                peso_preco_nota = (1 - peso_distancia) / 2
+                filtrado["score_recomendacao"] = (
+                    peso_distancia * dist_norm
+                    + peso_preco_nota * preco_norm
+                    + peso_preco_nota * nota_norm
+                )
+
+                top_n = filtrado.sort_values("score_recomendacao", ascending=False).head(10)
+
+                st.success(
+                    f"{len(filtrado)} anúncios dentro do raio/preço escolhidos — "
+                    "mostrando os 10 melhores pelo score combinado (distância + preço + nota)."
+                )
+
+                for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
+                    with st.container(border=True):
+                        link_anuncio_card = linha.get("listing_url")
+                        link_card_md = (
+                            f"[Ver anúncio no Airbnb]({link_anuncio_card})"
+                            if pd.notna(link_anuncio_card) else "Link indisponível"
+                        )
+                        st.markdown(
+                            f"**#{posicao} — {linha['nome_exibicao']}**\n\n"
+                            f"📍 {linha.get('bairro_padronizado', 'Bairro desconhecido')} · "
+                            f"{capitalizar_primeira(linha.get('tipo_propriedade', '-'))} · "
+                            f"{capitalizar_primeira(linha.get('tipo_quarto', '-'))} · "
+                            f"perto de *{linha['ponto_mais_proximo']}* · {link_card_md}"
+                        )
+                        rc1, rc2, rc3, rc4 = st.columns(4)
+                        rc1.metric("Preço/diária", f"R$ {linha['preco']:.2f}")
+                        rc2.metric("Distância", f"{linha['distancia_km']:.2f} km")
+                        if "nota_composta" in top_n.columns:
+                            rc3.metric("Nota", f"{linha['nota_composta']:.2f}")
+                        rc4.metric("Score", f"{linha['score_recomendacao']:.2f}")
+
+                st.divider()
+                st.markdown("##### 🗺️ Mapa das recomendações")
+                m_rec = folium.Map(
+                    location=[subset_pontos["lat"].mean(), subset_pontos["lon"].mean()],
+                    zoom_start=13, tiles="CartoDB positron",
+                )
+                for pt in subset_pontos.itertuples():
+                    folium.Marker(
+                        location=[pt.lat, pt.lon], popup=pt.nome,
+                        icon=folium.Icon(color="cadetblue", icon="star", prefix="fa"),
+                    ).add_to(m_rec)
+                for posicao, (_, linha) in enumerate(top_n.iterrows(), start=1):
+                    link_anuncio = linha.get("listing_url")
+                    link_html = (
+                        f'<a href="{link_anuncio}" target="_blank">Ver anúncio no Airbnb</a>'
+                        if pd.notna(link_anuncio) else "Link indisponível"
+                    )
+                    popup_html_rec = (
+                        f"<b>#{posicao}</b><br>"
+                        f"{linha['nome_exibicao']}<br>"
+                        f"R$ {linha['preco']:.2f} / diária<br>"
+                        f"{link_html}"
+                    )
+                    folium.CircleMarker(
+                        location=[linha["latitude"], linha["longitude"]],
+                        radius=8, color="#1e3d59", fill=True, fill_color="#ff6e40",
+                        fill_opacity=0.85,
+                        popup=folium.Popup(popup_html_rec, max_width=250),
+                    ).add_to(m_rec)
+                st_folium(m_rec, width=None, height=500, returned_objects=[])
+
+                st.caption(
+                    "💡 O score combinado normaliza distância, preço e nota entre 0 e 1 "
+                    "dentro do conjunto filtrado, e faz uma média ponderada pelos pesos "
+                    "escolhidos acima. É um ranking relativo aos anúncios que passaram "
+                    "pelos filtros de distância máxima e preço máximo — não um valor absoluto."
+                )
 
 
 # ---------------------------------------------------------------------------
