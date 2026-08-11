@@ -70,6 +70,19 @@ except ImportError:
     ANTHROPIC_DISPONIVEL = False
 
 _caminho_icone = os.path.join(os.path.dirname(__file__), "assets", "vander_ia_logo.png")
+
+
+def formatar_moeda(valor, casas=2, forcar_sinal=False):
+    """Formata um número no padrão brasileiro: ponto para milhar, vírgula para
+    decimal (ex.: 1234.5 -> "1.234,50"). Não inclui o prefixo "R$"."""
+    if pd.isna(valor):
+        return "-"
+    sinal = "+" if forcar_sinal and valor >= 0 else ("-" if valor < 0 else "")
+    texto = f"{abs(valor):,.{casas}f}"
+    texto = texto.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"{sinal}{texto}"
+
+
 st.set_page_config(
     page_title="Airbnb Rio de Janeiro — Análise Espacial",
     page_icon=_caminho_icone if os.path.exists(_caminho_icone) else "🏠",
@@ -531,15 +544,15 @@ def montar_contexto_dados(df, agg):
     partes = [
         f"O dataset tem {len(df)} anúncios do Airbnb no Rio de Janeiro, distribuídos em "
         f"{agg.shape[0]} bairros.",
-        f"Preço médio geral: R$ {df['preco'].mean():.2f} (mediana R$ {df['preco'].median():.2f}).",
+        f"Preço médio geral: R$ {formatar_moeda(df['preco'].mean())} (mediana R$ {formatar_moeda(df['preco'].median())}).",
         "5 bairros mais caros (preço médio): " + "; ".join(
-            f"{r.bairro_padronizado} (R$ {r.preco_medio:.0f})" for r in top_caros.itertuples()
+            f"{r.bairro_padronizado} (R$ {formatar_moeda(r.preco_medio, 0)})" for r in top_caros.itertuples()
         ),
         "5 bairros mais baratos (preço médio): " + "; ".join(
-            f"{r.bairro_padronizado} (R$ {r.preco_medio:.0f})" for r in top_baratos.itertuples()
+            f"{r.bairro_padronizado} (R$ {formatar_moeda(r.preco_medio, 0)})" for r in top_baratos.itertuples()
         ),
         "5 bairros com maior rentabilidade diária média: " + "; ".join(
-            f"{r.bairro_padronizado} (R$ {r.rentabilidade_media:.2f})" for r in top_rentaveis.itertuples()
+            f"{r.bairro_padronizado} (R$ {formatar_moeda(r.rentabilidade_media)})" for r in top_rentaveis.itertuples()
         ),
     ]
     if "nota_composta" in df.columns:
@@ -1185,7 +1198,7 @@ with col_info:
             "3. **Recorrente (2-3 imóveis)**\n"
             "4. **Iniciante (1 imóvel)**\n\n"
             f"**Faixa de preço**: diárias muito altas (a partir de R$ "
-            f"{df['preco_teto_outlier'].iloc[0]:,.0f}, o 1% mais caro) distorceriam o mapa "
+            f"{formatar_moeda(df['preco_teto_outlier'].iloc[0], 0)}, o 1% mais caro) distorceriam o mapa "
             "e os filtros, então ficam numa faixa própria, **Outlier (fora da curva)**. "
             "O restante é dividido em quatro grupos iguais: Econômico, Médio, Alto e Premium.\n\n"
             "**Avaliações**:\n"
@@ -1222,7 +1235,7 @@ with abas_criadas[0]:
         f'<div class="celula"><div class="rotulo">Bairros mapeados</div>'
         f'<div class="valor">{int(agg.shape[0])}</div></div>'
         f'<div class="celula"><div class="rotulo">Preço médio</div>'
-        f'<div class="valor">R$ {agg["preco_medio"].mean():,.0f}</div></div>'
+        f'<div class="valor">R$ {formatar_moeda(agg["preco_medio"].mean(), 0)}</div></div>'
         f'<div class="celula"><div class="rotulo">Score de luxo médio</div>'
         f'<div class="valor">{agg["score_luxo_medio"].mean():.2f}</div></div>'
         f'<div class="celula"><div class="rotulo">Ocupação média</div>'
@@ -1308,7 +1321,7 @@ with abas_criadas[0]:
                     f"Anúncios: {int(row['qtd_anuncios'])}<br>"
                     f"Score luxo: {row['score_luxo_medio']:.2f}<br>"
                     f"Faixa preço: {row['faixa_preco_moda']}<br>"
-                    f"Preço médio: R$ {row['preco_medio']:.0f}<br>"
+                    f"Preço médio: R$ {formatar_moeda(row['preco_medio'], 0)}<br>"
                     f"Rentabilidade média: {row['rentabilidade_media']:.2f}<br>"
                     f"Taxa ocupação média: {row['taxa_ocupacao_media']:.2%}"
                 )
@@ -1691,13 +1704,16 @@ with abas_criadas[2]:
                     p_min, p_max = resultado["preco_intervalo"]
                     o_min, o_max = resultado["ocupacao_intervalo"]
                     r_min, r_max = resultado["rentabilidade_intervalo"]
-                    valor_preco = f"R$ {resultado['preco_diaria_previsto']:.2f} (± R$ {resultado['preco_erro_abs']:.2f})"
+                    valor_preco = (
+                        f"R$ {formatar_moeda(resultado['preco_diaria_previsto'])} "
+                        f"(± R$ {formatar_moeda(resultado['preco_erro_abs'])})"
+                    )
                     valor_ocup = f"{resultado['taxa_ocupacao_prevista']:.1%} (± {resultado['ocupacao_erro_abs']:.1%})"
-                    valor_rent = f"R$ {resultado['rentabilidade_anual_estimada']:,.2f}"
+                    valor_rent = f"R$ {formatar_moeda(resultado['rentabilidade_anual_estimada'])}"
                 else:
-                    valor_preco = f"R$ {resultado['preco_diaria_previsto']:.2f}"
+                    valor_preco = f"R$ {formatar_moeda(resultado['preco_diaria_previsto'])}"
                     valor_ocup = f"{resultado['taxa_ocupacao_prevista']:.1%}"
-                    valor_rent = f"R$ {resultado['rentabilidade_anual_estimada']:,.2f}"
+                    valor_rent = f"R$ {formatar_moeda(resultado['rentabilidade_anual_estimada'])}"
 
                 if bairro_referencia:
                     delta_preco = resultado["preco_diaria_previsto"] - bairro_referencia["preco_medio"]
@@ -1706,17 +1722,17 @@ with abas_criadas[2]:
                                   - bairro_referencia["rentabilidade_anual_media"])
                     m1, m2, m3, m4 = st.columns(4)
                     m1.metric("Preço sugerido / diária", valor_preco,
-                              delta=f"R$ {delta_preco:+.2f} vs. média do bairro")
+                              delta=f"R$ {formatar_moeda(delta_preco, forcar_sinal=True)} vs. média do bairro")
                     m2.metric("Taxa de ocupação estimada", valor_ocup,
                               delta=f"{delta_ocup:+.1%} vs. média do bairro")
                     m3.metric("Noites ocupadas/ano (estim.)", f"{resultado['noites_ocupadas_ano_estimadas']:.0f}")
                     m4.metric("Rentabilidade anual estimada", valor_rent,
-                              delta=f"R$ {delta_rent:+,.2f} vs. média do bairro")
+                              delta=f"R$ {formatar_moeda(delta_rent, forcar_sinal=True)} vs. média do bairro")
                     st.caption(
                         f"Comparação com a média observada em **{bairro_referencia['nome']}**: "
-                        f"preço R$ {bairro_referencia['preco_medio']:.2f}, ocupação "
+                        f"preço R$ {formatar_moeda(bairro_referencia['preco_medio'])}, ocupação "
                         f"{bairro_referencia['taxa_ocupacao_media']:.1%}, rentabilidade anual "
-                        f"R$ {bairro_referencia['rentabilidade_anual_media']:,.2f} (estimativa própria do app, "
+                        f"R$ {formatar_moeda(bairro_referencia['rentabilidade_anual_media'])} (estimativa própria do app, "
                         "não vem do modelo)."
                     )
                 else:
@@ -1730,7 +1746,7 @@ with abas_criadas[2]:
                 if resultado["tem_margem_erro"]:
                     st.caption(
                         f"📐 Faixa realista considerando o erro do modelo: rentabilidade anual entre "
-                        f"R$ {r_min:,.2f} e R$ {r_max:,.2f}. "
+                        f"R$ {formatar_moeda(r_min)} e R$ {formatar_moeda(r_max)}. "
                         f"Confiabilidade dos modelos: preço R² = {resultado['r2_preco']:.2f} · "
                         f"ocupação R² = {resultado['r2_ocupacao']:.2f} "
                         "(quanto mais próximo de 1, melhor o modelo explica os dados)."
@@ -1825,13 +1841,13 @@ with abas_criadas[2]:
                         cc1, cc2, cc3, cc4 = st.columns(4)
                         if tem_margem_busca:
                             cc1.metric("Preço/diária previsto",
-                                       f"R$ {linha['preco_previsto']:.2f} (± R$ {erro_preco_busca:.2f})")
+                                       f"R$ {formatar_moeda(linha['preco_previsto'])} (± R$ {formatar_moeda(erro_preco_busca)})")
                             cc2.metric("Ocupação prevista",
                                        f"{linha['ocupacao_prevista']:.1%} (± {erro_ocup_busca:.1%})")
                         else:
-                            cc1.metric("Preço/diária previsto", f"R$ {linha['preco_previsto']:.2f}")
+                            cc1.metric("Preço/diária previsto", f"R$ {formatar_moeda(linha['preco_previsto'])}")
                             cc2.metric("Ocupação prevista", f"{linha['ocupacao_prevista']:.1%}")
-                        cc3.metric("Rentabilidade anual prevista", f"R$ {linha['rentabilidade_anual_prevista']:,.2f}")
+                        cc3.metric("Rentabilidade anual prevista", f"R$ {formatar_moeda(linha['rentabilidade_anual_prevista'])}")
                         cc4.metric(
                             "Capacidade / quartos",
                             f"{int(linha.get('capacidade_hospedes', 0))} hóspedes · "
@@ -1883,7 +1899,7 @@ with abas_criadas[3]:
                     "nome_exibicao": "Anúncio", "bairro_padronizado": "Bairro",
                     "nota_composta": "Nota", "preco": "Preço (R$)",
                     "avaliacoes_por_mes": "Aval./mês",
-                }).style.format({"Nota": "{:.2f}", "Preço (R$)": "{:.2f}", "Aval./mês": "{:.2f}"}),
+                }).style.format({"Nota": "{:.2f}", "Preço (R$)": formatar_moeda, "Aval./mês": "{:.2f}"}),
                 hide_index=True, use_container_width=True,
             )
         with col_top2:
@@ -1894,7 +1910,7 @@ with abas_criadas[3]:
                     "nome_exibicao": "Anúncio", "bairro_padronizado": "Bairro",
                     "nota_composta": "Nota", "preco": "Preço (R$)",
                     "avaliacoes_por_mes": "Aval./mês",
-                }).style.format({"Nota": "{:.2f}", "Preço (R$)": "{:.2f}", "Aval./mês": "{:.2f}"}),
+                }).style.format({"Nota": "{:.2f}", "Preço (R$)": formatar_moeda, "Aval./mês": "{:.2f}"}),
                 hide_index=True, use_container_width=True,
             )
         st.caption(
@@ -2118,7 +2134,7 @@ with abas_criadas[4]:
                             f"perto de *{linha['ponto_mais_proximo']}* · {link_card_md}"
                         )
                         rc1, rc2, rc3, rc4 = st.columns(4)
-                        rc1.metric("Preço/diária", f"R$ {linha['preco']:.2f}")
+                        rc1.metric("Preço/diária", f"R$ {formatar_moeda(linha['preco'])}")
                         rc2.metric("Distância", f"{linha['distancia_km']:.2f} km")
                         if "nota_composta" in top_n.columns:
                             rc3.metric("Nota", f"{linha['nota_composta']:.2f}")
@@ -2144,7 +2160,7 @@ with abas_criadas[4]:
                     popup_html_rec = (
                         f"<b>#{posicao}</b><br>"
                         f"{linha['nome_exibicao']}<br>"
-                        f"R$ {linha['preco']:.2f} / diária<br>"
+                        f"R$ {formatar_moeda(linha['preco'])} / diária<br>"
                         f"{link_html}"
                     )
                     folium.CircleMarker(
