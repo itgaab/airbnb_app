@@ -1178,20 +1178,23 @@ with col_titulo:
 with col_info:
     with st.popover("ℹ️ Info", use_container_width=True):
         st.markdown(
-            "**Perfil do anfitrião** — 1) `Superanfitrião` se tiver o selo oficial do Airbnb; "
-            "2) senão, `Profissional (4+ imóveis)` se administra 4 ou mais anúncios; "
-            "3) `Recorrente (2-3 imóveis)`; 4) `Iniciante (1 imóvel)`. O selo tem prioridade "
-            "porque já é um critério oficial (nota alta + baixo cancelamento + resposta rápida).\n\n"
-            f"**Faixa de preço controlada** — para não deixar diárias muito fora da curva "
-            f"(≥ R$ {df['preco_teto_outlier'].iloc[0]:,.0f}, percentil 99) distorcerem a escala "
-            "de cor do mapa e os filtros, essas diárias caem numa faixa própria "
-            "`Outlier (fora da curva)`. As demais são cortadas em quartis do preço 'normal' "
-            "(Econômico / Médio / Alto / Premium).\n\n"
-            "**Variáveis de avaliação** — `qualidade_percebida` usa as faixas de nota do próprio "
-            "critério de superanfitrião (< 4,0 / 4,0–4,7 / ≥ 4,8); `nivel_atividade_avaliacoes` "
-            "usa tercis de avaliações/mês (só entre quem já recebeu avaliação); "
-            "`indice_engajamento` = nota composta × avaliações por mês, pra rankear anúncios "
-            "bons **e** populares ao mesmo tempo."
+            "**Perfil do anfitrião** (nessa ordem):\n"
+            "1. **Superanfitrião** — tem o selo oficial do Airbnb (já garante nota alta, "
+            "pouco cancelamento e resposta rápida)\n"
+            "2. **Profissional (4+ imóveis)** — sem selo, mas administra 4+ anúncios\n"
+            "3. **Recorrente (2-3 imóveis)**\n"
+            "4. **Iniciante (1 imóvel)**\n\n"
+            f"**Faixa de preço**: diárias muito altas (a partir de R$ "
+            f"{df['preco_teto_outlier'].iloc[0]:,.0f}, o 1% mais caro) distorceriam o mapa "
+            "e os filtros, então ficam numa faixa própria, **Outlier (fora da curva)**. "
+            "O restante é dividido em quatro grupos iguais: Econômico, Médio, Alto e Premium.\n\n"
+            "**Avaliações**:\n"
+            "- **Qualidade percebida**: mesmas faixas de nota do superanfitrião "
+            "(< 4,0 / 4,0–4,7 / ≥ 4,8)\n"
+            "- **Nível de atividade**: divide em 3 grupos pela quantidade de avaliações/mês "
+            "(só quem já foi avaliado)\n"
+            "- **Índice de engajamento**: nota × avaliações/mês, pra achar anúncios bons "
+            "**e** populares ao mesmo tempo"
         )
 
 PAGINAS_NAV = [
