@@ -314,6 +314,7 @@ def cartao_destaque(rotulo, valor):
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
 PASTA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 LOGO_VANDER_IA = os.path.join(PASTA_ASSETS, "vander_ia_logo.png")
+SPLASH_FUNDO_VANDER_IA = os.path.join(PASTA_ASSETS, "splash_vander22_rio.png")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
@@ -329,6 +330,18 @@ def _logo_base64():
         return base64.b64encode(f.read()).decode("utf-8")
 
 
+@st.cache_data
+def _splash_fundo_base64():
+    """Lê a imagem de fundo da splash screen (assets/splash_vander22_rio.png) e
+    devolve como base64, para ser usada como background-image do overlay via
+    CSS (mesmo motivo do _logo_base64: st.markdown não serve arquivos locais
+    diretamente)."""
+    if not os.path.exists(SPLASH_FUNDO_VANDER_IA):
+        return None
+    with open(SPLASH_FUNDO_VANDER_IA, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
 def exibir_splash_screen():
     """Mostra uma splash screen de abertura (logo + nome do app + atalhos das
     abas + indicador de carregamento) cobrindo a tela inteira, enquanto os
@@ -337,6 +350,15 @@ def exibir_splash_screen():
     logo_html = (
         f'<img src="data:image/png;base64,{logo_b64}" class="splash-logo" />'
         if logo_b64 else '<div class="splash-logo-fallback">🤖</div>'
+    )
+    fundo_b64 = _splash_fundo_base64()
+    estilo_fundo = (
+        f"background-image: linear-gradient(180deg, rgba(20,50,85,0.55) 0%, "
+        f"rgba(18,63,110,0.65) 45%, rgba(29,95,165,0.80) 100%), "
+        f"url('data:image/png;base64,{fundo_b64}');"
+        "background-size: cover; background-position: center;"
+        if fundo_b64 else
+        "background: linear-gradient(180deg, #EAF3FB 0%, #C9E1F6 38%, #1D5FA5 100%);"
     )
     itens_nav = [
         ("🗺️", "Mapa Dinâmico"), ("📅", "Evolução Temporal"),
@@ -362,7 +384,7 @@ def exibir_splash_screen():
                 gap: 0.4rem;
                 padding: 3rem 1.5rem;
                 overflow-y: auto;
-                background: linear-gradient(180deg, #EAF3FB 0%, #C9E1F6 38%, #1D5FA5 100%);
+                {estilo_fundo}
                 text-align: center;
             }}
             .splash-logo {{
@@ -968,9 +990,6 @@ def prever_investimento(modelos: dict, dados_imovel: dict, mes_referencia: str =
             "r2_ocupacao": modelos.get("r2_ocupacao"),
         })
     return resultado
-
-
-
 
 
 # ---------------------------------------------------------------------------
