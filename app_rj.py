@@ -314,6 +314,7 @@ def cartao_destaque(rotulo, valor):
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
 PASTA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
 LOGO_VANDER_IA = os.path.join(PASTA_ASSETS, "vander_ia_logo.png")
+LOGO_ROBO_IA = os.path.join(PASTA_ASSETS, "robo_ia.png")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
@@ -2212,7 +2213,8 @@ with abas_criadas[5]:
             f"### Resumo do dataset carregado\n{contexto_dados}"
         )
 
-        avatar_assistente = LOGO_VANDER_IA if os.path.exists(LOGO_VANDER_IA) else "🤖"
+        # Avatar da resposta do chat: robozinho da VANDER IA (assets/robo_ia.png)
+        avatar_assistente = LOGO_ROBO_IA if os.path.exists(LOGO_ROBO_IA) else "🤖"
 
         if "mensagens_assistente" not in st.session_state:
             st.session_state.mensagens_assistente = []
