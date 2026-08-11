@@ -860,15 +860,28 @@ pontos_turisticos = buscar_pontos_turisticos()
 agg = adicionar_distancia_turistica(agg, pontos_turisticos)
 mapa_gdf = gdf.merge(agg, left_on="neighbourhood", right_on="bairro_padronizado", how="left")
 
+PASTA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
+CAMINHO_LOGO = os.path.join(PASTA_ASSETS, "logo_vander22.png")
+
 col_titulo, col_info = st.columns([8, 1], vertical_alignment="bottom")
 with col_titulo:
-    st.markdown(
-        '<div class="cabecalho-app">'
-        "<h1>Análise Espacial — Airbnb Rio de Janeiro</h1>"
-        "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
-        "</div>",
-        unsafe_allow_html=True,
-    )
+    if os.path.exists(CAMINHO_LOGO):
+        st.image(CAMINHO_LOGO, width=260)
+        st.markdown(
+            '<div class="cabecalho-app">'
+            "<p>Análise Espacial — Airbnb Rio de Janeiro · Preço, ocupação, luxo, "
+            "turismo e sazonalidade dos anúncios por bairro.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            '<div class="cabecalho-app">'
+            "<h1>Análise Espacial — Airbnb Rio de Janeiro</h1>"
+            "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
 with col_info:
     with st.popover("ℹ️ Info", use_container_width=True):
         st.markdown(
