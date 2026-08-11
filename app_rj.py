@@ -2184,10 +2184,6 @@ with abas_criadas[5]:
         "Explore os dados do app e converse com a VANDER IA sobre bairros, preços, "
         "rentabilidade, avaliações e outros indicadores."
     )
-    st.caption(
-        "💡 **Observação:** a VANDER IA consulta um resumo dos dados disponíveis, mas não "
-        "acompanha os filtros aplicados nas demais abas."
-    )
 
     if not ANTHROPIC_DISPONIVEL:
         st.error(
