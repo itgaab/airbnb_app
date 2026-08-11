@@ -9,7 +9,7 @@ seis abas:
   3. Simulador de Investimento — previsão de preço, ocupação e rentabilidade
   4. Análise de Avaliações — pontos fortes e fracos por bairro e anúncio
   5. Recomendação por Turismo — melhores anúncios perto de pontos de interesse
-  6. VANDER IA 1.0 — assistente de IA para perguntas em linguagem natural sobre os dados
+  6. Assistente IA — perguntas em linguagem natural sobre os dados
 """
 
 import os
@@ -67,10 +67,9 @@ try:
 except ImportError:
     ANTHROPIC_DISPONIVEL = False
 
-_caminho_icone = os.path.join(os.path.dirname(__file__), "assets", "vander_ia_logo.png")
 st.set_page_config(
     page_title="Airbnb Rio de Janeiro — Análise Espacial",
-    page_icon=_caminho_icone if os.path.exists(_caminho_icone) else "🏠",
+    page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -81,237 +80,79 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        :root {
-            --acento-azul: #1D5FA5;
-            --acento-azul-escuro: #123F6E;
-            --acento-azul-suave: rgba(29, 95, 165, 0.08);
-            --linha-sutil: rgba(128, 128, 128, 0.22);
-            --linha-media: rgba(128, 128, 128, 0.32);
-        }
-
         .block-container {
-            padding-top: 1.5rem;
+            padding-top: 1.6rem;
             padding-bottom: 2.5rem;
             max-width: 1300px;
         }
 
-        /* Cabeçalho — selo editorial pequeno + título serifado + régua curta
-           em azul (no lugar da régua preta full-width, mais leve) */
-        .cabecalho-app .selo {
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--acento-azul);
-            font-weight: 600;
-            margin-bottom: 0.3rem;
-        }
+        /* Cabeçalho — título + botão de informação alinhados */
         .cabecalho-app h1 {
-            font-family: Georgia, "Times New Roman", serif;
             font-size: 2.05rem;
-            font-weight: 400;
-            letter-spacing: -0.01em;
-            margin: 0 0 0.55rem 0;
-            padding-bottom: 0.6rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.15rem;
             color: var(--text-color);
-            border-bottom: 1px solid var(--linha-media);
-            position: relative;
-        }
-        .cabecalho-app h1::after {
-            content: "";
-            position: absolute;
-            left: 0;
-            bottom: -1px;
-            width: 56px;
-            height: 2px;
-            background-color: var(--acento-azul);
         }
         .cabecalho-app p {
             color: var(--text-color);
-            opacity: 0.62;
-            font-size: 0.92rem;
+            opacity: 0.65;
+            font-size: 0.95rem;
             margin-top: 0;
-            line-height: 1.5;
-        }
-
-        /* KPIs em cartões leves — bordas finas e cantos arredondados no lugar
-           da grade "planilha", com friso azul discreto no topo de cada célula */
-        .grade-kpi {
-            display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.7rem;
-            margin-bottom: 1.1rem;
-        }
-        .grade-kpi .celula {
-            border: 1px solid var(--linha-sutil);
-            border-top: 2px solid var(--acento-azul);
-            border-radius: 6px;
-            padding: 0.7rem 0.9rem;
-            background-color: var(--secondary-background-color);
-            transition: border-color 0.15s ease;
-        }
-        .grade-kpi .celula:hover {
-            border-color: var(--acento-azul);
-        }
-        .grade-kpi .celula .rotulo {
-            font-size: 0.68rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-color);
-            opacity: 0.55;
-            margin-bottom: 0.15rem;
-        }
-        .grade-kpi .celula .valor {
-            font-family: Georgia, serif;
-            font-size: 1.35rem;
-            color: var(--text-color);
-            line-height: 1.15;
-        }
-        @media (max-width: 900px) {
-            .grade-kpi { grid-template-columns: repeat(2, 1fr); }
         }
 
         /* Botão de informação compacto — empurrado pra baixo do menu nativo do
            Streamlit (Share/⋮) e com cores que se adaptam ao tema claro/escuro */
         div[data-testid="stPopover"] {
-            margin-top: 0.3rem;
+            margin-top: 0.35rem;
         }
         div[data-testid="stPopover"] button {
-            border-radius: 6px;
-            padding: 0.3rem 0.75rem;
+            border-radius: 999px;
+            padding: 0.25rem 0.7rem;
             font-size: 0.8rem;
             color: var(--text-color);
-            border: 1px solid var(--linha-media);
+            border: 1px solid rgba(128, 128, 128, 0.35);
             background-color: var(--secondary-background-color);
-            transition: border-color 0.15s ease, color 0.15s ease;
         }
         div[data-testid="stPopover"] button:hover {
-            border-color: var(--acento-azul);
-            color: var(--acento-azul);
+            border-color: var(--primary-color);
+            color: var(--primary-color);
         }
 
-        /* Abas editoriais — sublinhado fino que engrossa e vira azul na aba
-           ativa, com transição suave no peso da fonte e na opacidade */
-        div[data-baseweb="tab-list"] {
-            gap: 24px;
-            border-bottom: 1px solid var(--linha-sutil) !important;
-            padding-bottom: 0;
-            margin-bottom: 1rem;
-        }
+        /* Abas — mais espaçadas e com destaque suave na aba ativa */
         button[data-baseweb="tab"] {
-            font-size: 0.89rem;
-            font-weight: 400;
-            padding: 0.5rem 0.1rem;
-            border-radius: 0 !important;
-            background-color: transparent;
-            color: var(--text-color);
-            opacity: 0.58;
-            transition: opacity 0.15s ease, color 0.15s ease;
-        }
-        button[data-baseweb="tab"]:hover {
-            opacity: 0.9;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 0.5rem 1rem;
         }
         button[data-baseweb="tab"][aria-selected="true"] {
-            color: var(--acento-azul);
-            font-weight: 500;
-            opacity: 1;
+            color: var(--primary-color);
         }
         div[data-baseweb="tab-highlight"] {
-            background-color: var(--acento-azul);
-            height: 2px;
+            background-color: var(--primary-color);
         }
         div[data-baseweb="tab-border"] {
-            background-color: transparent;
+            background-color: rgba(128, 128, 128, 0.25);
         }
 
-        /* Métricas — sóbrias, sem cartão, só um fio fino embaixo e o valor
-           em serifada, como uma cifra de tabela financeira */
+        /* Métricas e cartões com leve sombra — adaptados ao tema */
         div[data-testid="stMetric"] {
-            background-color: transparent;
-            border: none;
-            border-bottom: 1px solid var(--linha-sutil);
-            border-radius: 0;
-            padding: 0.45rem 0.2rem;
-        }
-        div[data-testid="stMetricValue"] {
-            font-family: Georgia, serif;
-        }
-        div[data-testid="stMetricLabel"] {
-            opacity: 0.6;
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-        }
-
-        /* Painel de filtros — envolve os controles num cartão discreto para
-           separar visualmente do conteúdo principal (mapa, gráficos etc.) */
-        .cartao-filtros {
-            border: 1px solid var(--linha-sutil);
-            border-radius: 8px;
-            padding: 1rem 1.1rem 1.15rem 1.1rem;
             background-color: var(--secondary-background-color);
-        }
-        .cartao-filtros .titulo {
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            font-weight: 600;
-            color: var(--acento-azul);
-            margin-bottom: 0.7rem;
-        }
-        /* Alinha o container nativo do Streamlit (st.container(border=True)) ao
-           friso azul usado nos cartões de KPI, dando unidade ao conjunto */
-        div[data-testid="stVerticalBlockBorderWrapper"]:has(.cartao-filtros) {
-            border-radius: 8px !important;
-            border-top: 2px solid var(--acento-azul) !important;
-        }
-
-        /* Cartão de destaque — para o número mais importante de cada aba,
-           ex.: "Bairros no filtro atual". Cantos e proporções alinhados aos
-           demais cartões (KPIs e filtros) para dar unidade visual ao layout */
-        .cartao-destaque {
-            background-color: var(--acento-azul);
-            border-radius: 8px;
-            padding: 0.85rem 1.1rem;
-            text-align: center;
-            margin-top: 0.9rem;
-        }
-        .cartao-destaque .rotulo {
-            color: rgba(255, 255, 255, 0.78);
-            font-size: 0.72rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            margin-bottom: 0.15rem;
-        }
-        .cartao-destaque .valor {
-            color: #FFFFFF;
-            font-family: Georgia, serif;
-            font-size: 1.8rem;
-            line-height: 1.1;
+            border: 1px solid rgba(128, 128, 128, 0.2);
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
         }
 
         hr {
-            margin: 1.5rem 0;
-            border-color: var(--linha-sutil);
+            margin: 1.6rem 0;
+            border-color: rgba(128, 128, 128, 0.25);
         }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-
-def cartao_destaque(rotulo, valor):
-    """Renderiza um cartão de destaque (fundo sólido azul) para o número mais
-
-    importante de uma aba — usado no lugar de um st.metric solto."""
-    st.markdown(
-        f'<div class="cartao-destaque"><div class="rotulo">{rotulo}</div>'
-        f'<div class="valor">{valor}</div></div>',
-        unsafe_allow_html=True,
-    )
-
 PASTA_DADOS = os.path.join(os.path.dirname(__file__), "dados")
-PASTA_ASSETS = os.path.join(os.path.dirname(__file__), "assets")
-LOGO_VANDER_IA = os.path.join(PASTA_ASSETS, "vander_ia_logo.png")
 NOMES_MES = {1: "Jan", 2: "Fev", 3: "Mar", 4: "Abr", 5: "Mai", 6: "Jun",
              7: "Jul", 8: "Ago", 9: "Set", 10: "Out", 11: "Nov", 12: "Dez"}
 
@@ -1008,9 +849,36 @@ def aplicar_perfil(perfil: dict):
 
 
 # ---------------------------------------------------------------------------
-# Carrega tudo
+# Splash screen — exibida uma única vez por sessão, enquanto os dados
+# (parquet/geojson) são carregados e cacheados pela primeira vez. Nas
+# próximas execuções (reruns por causa de filtros/widgets) o cache do
+# @st.cache_data já responde na hora e a splash não aparece de novo.
 # ---------------------------------------------------------------------------
-df, gdf, calendario, temporal = carregar_dados()
+CAMINHO_SPLASH = os.path.join(os.path.dirname(__file__), "assets", "splash_vander22_rio.png")
+
+if "splash_exibida" not in st.session_state:
+    splash = st.empty()
+    with splash.container():
+        st.markdown(
+            "<style>.block-container {padding-top: 0 !important;}</style>",
+            unsafe_allow_html=True,
+        )
+        if os.path.exists(CAMINHO_SPLASH):
+            st.image(CAMINHO_SPLASH, use_container_width=True)
+        st.markdown(
+            "<p style='text-align:center; opacity:.65; margin-top:-0.5rem;'>"
+            "Carregando dados...</p>",
+            unsafe_allow_html=True,
+        )
+    df, gdf, calendario, temporal = carregar_dados()
+    st.session_state["splash_exibida"] = True
+    splash.empty()
+else:
+    # ---------------------------------------------------------------------
+    # Carrega tudo
+    # ---------------------------------------------------------------------
+    df, gdf, calendario, temporal = carregar_dados()
+
 df = criar_perfil_anfitriao(df)
 df = criar_variaveis_avaliacoes(df)
 df = criar_faixa_preco_controlada(df)
@@ -1023,7 +891,6 @@ col_titulo, col_info = st.columns([8, 1], vertical_alignment="bottom")
 with col_titulo:
     st.markdown(
         '<div class="cabecalho-app">'
-        '<div class="selo">Análise de dados · Rio de Janeiro</div>'
         "<h1>Análise Espacial — Airbnb Rio de Janeiro</h1>"
         "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
         "</div>",
@@ -1048,60 +915,33 @@ with col_info:
             "bons **e** populares ao mesmo tempo."
         )
 
-PAGINAS_NAV = [
-    ("mapa", "🗺️ Mapa Dinâmico"),
-    ("sazonalidade", "📅 Evolução Temporal dos Preços"),
-    ("simulador", "🧮 Simulador de Investimento"),
-    ("avaliacoes", "📝 Análise de Avaliações"),
-    ("recomendacao", "🎯 Recomendação por Turismo"),
-    ("assistente", "🤖 VANDER IA"),
-]
-
-abas_criadas = st.tabs([rotulo for _, rotulo in PAGINAS_NAV])
+aba_mapa, aba_sazonalidade, aba_simulador, aba_avaliacoes, aba_recomendacao, aba_assistente = st.tabs(
+    ["🗺️ Mapa Dinâmico", "📅 Evolução Temporal dos Preços", "🧮 Simulador de Investimento",
+     "📝 Análise de Avaliações", "🎯 Recomendação por Turismo", "🤖 Assistente IA"]
+)
 
 # ---------------------------------------------------------------------------
 # ABA 1 — MAPA DINÂMICO
 # ---------------------------------------------------------------------------
-with abas_criadas[0]:
+with aba_mapa:
     st.subheader("Mapa por bairro: luxo, rentabilidade, ocupação e turismo")
-
-    # Linha de KPIs gerais do dataset completo (não muda com o filtro de preço,
-    # dá o panorama da cidade antes de entrar no recorte específico) — em
-    # formato de grade com fio fino, como uma tabela de jornal
-    st.markdown(
-        '<div class="grade-kpi">'
-        f'<div class="celula"><div class="rotulo">Bairros mapeados</div>'
-        f'<div class="valor">{int(agg.shape[0])}</div></div>'
-        f'<div class="celula"><div class="rotulo">Preço médio</div>'
-        f'<div class="valor">R$ {agg["preco_medio"].mean():,.0f}</div></div>'
-        f'<div class="celula"><div class="rotulo">Score de luxo médio</div>'
-        f'<div class="valor">{agg["score_luxo_medio"].mean():.2f}</div></div>'
-        f'<div class="celula"><div class="rotulo">Ocupação média</div>'
-        f'<div class="valor">{agg["taxa_ocupacao_media"].mean():.0%}</div></div>'
-        "</div>",
-        unsafe_allow_html=True,
-    )
 
     col_filtros, col_mapa = st.columns([1, 3])
 
     with col_filtros:
-        with st.container(border=True):
-            st.markdown('<div class="cartao-filtros"><div class="titulo">Filtros</div></div>', unsafe_allow_html=True)
-            preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
-            faixa_preco = st.slider(
-                "Faixa de preço médio do bairro (R$)",
-                min_value=float(np.floor(preco_min)),
-                max_value=float(np.ceil(preco_max)),
-                value=(float(np.floor(preco_min)), float(np.ceil(preco_max))),
-            )
-            mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
-            mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
-            mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
+        preco_min, preco_max = float(agg["preco_medio"].min()), float(agg["preco_medio"].max())
+        faixa_preco = st.slider(
+            "Faixa de preço médio do bairro (R$)",
+            min_value=float(np.floor(preco_min)),
+            max_value=float(np.ceil(preco_max)),
+            value=(float(np.floor(preco_min)), float(np.ceil(preco_max))),
+        )
+        mostrar_populares = st.checkbox("Mostrar bairros de região popular", value=True)
+        mostrar_nao_populares = st.checkbox("Mostrar bairros de região não popular", value=True)
+        mostrar_turismo = st.checkbox("Mostrar pontos turísticos", value=True)
 
-            cartao_destaque(
-                "Bairros no filtro atual",
-                int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]),
-            )
+        st.metric("Bairros no filtro atual",
+                   int(agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])].shape[0]))
 
     agg_filtrado = agg[(agg["preco_medio"] >= faixa_preco[0]) & (agg["preco_medio"] <= faixa_preco[1])]
     if not mostrar_populares:
@@ -1198,7 +1038,7 @@ with abas_criadas[0]:
 # ---------------------------------------------------------------------------
 # ABA 2 — SAZONALIDADE
 # ---------------------------------------------------------------------------
-with abas_criadas[1]:
+with aba_sazonalidade:
     if calendario is None or temporal is None:
         st.warning(
             "Esta aba precisa dos arquivos `calendar_agregado.parquet` e `listings_temporal.parquet` "
@@ -1379,7 +1219,7 @@ with abas_criadas[1]:
 # ---------------------------------------------------------------------------
 # ABA 3 — SIMULADOR DE INVESTIMENTO
 # ---------------------------------------------------------------------------
-with abas_criadas[2]:
+with aba_simulador:
     st.subheader("Simulador de Preço, Ocupação e Rentabilidade")
     st.caption(
         "Informe as características de um imóvel e receba uma estimativa de preço de diária, "
@@ -1697,11 +1537,12 @@ with abas_criadas[2]:
 
 # ---------------------------------------------------------------------------
 # ABA 4 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
-# Página de avaliações — usa sub-notas por aspecto (limpeza, comunicação,
+# Esta aba já era declarada em st.tabs() mas não tinha bloco `with aba_avaliacoes:`
+# — ficava vazia. Se o dataset tiver sub-notas por aspecto (limpeza, comunicação,
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
 # indicadores de engajamento já calculados em criar_variaveis_avaliacoes().
 # ---------------------------------------------------------------------------
-with abas_criadas[3]:
+with aba_avaliacoes:
     st.subheader("📝 Pontos fortes e fracos das hospedagens")
     st.caption(
         "Usa as sub-notas de avaliação (limpeza, comunicação, localização etc.), quando "
@@ -1789,6 +1630,87 @@ with abas_criadas[3]:
             f"🟢 Ponto forte geral: **{medias_gerais.index[-1]}** (maior média)."
         )
 
+        st.divider()
+        st.markdown("##### Comparar um bairro com a média da cidade")
+        n_min_anuncios_sub = st.slider(
+            "Mínimo de anúncios por bairro (evita bairros com poucos dados)",
+            1, 30, 5, key="sub_min_anuncios",
+        )
+        contagem_bairro = df.groupby("bairro_padronizado")["id_anuncio"].count()
+        bairros_disponiveis = sorted(
+            contagem_bairro[contagem_bairro >= n_min_anuncios_sub].index.tolist()
+        )
+        if not bairros_disponiveis:
+            st.warning("Nenhum bairro atinge esse mínimo de anúncios — reduza o filtro.")
+        else:
+            bairro_escolhido = st.selectbox("Bairro", bairros_disponiveis)
+
+            media_cidade = df[list(subnotas_disponiveis)].mean()
+            media_bairro = df.loc[
+                df["bairro_padronizado"] == bairro_escolhido, list(subnotas_disponiveis)
+            ].mean()
+            delta = (media_bairro - media_cidade).rename(index=subnotas_disponiveis).sort_values()
+
+            col_rad1, col_rad2 = st.columns(2)
+            with col_rad1:
+                categorias_radar = list(subnotas_disponiveis.values())
+                fig_radar = go.Figure()
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=media_cidade.rename(index=subnotas_disponiveis)[categorias_radar].values,
+                    theta=categorias_radar, fill="toself", name="Cidade (média)",
+                    line_color="#9aa0a6",
+                ))
+                fig_radar.add_trace(go.Scatterpolar(
+                    r=media_bairro.rename(index=subnotas_disponiveis)[categorias_radar].values,
+                    theta=categorias_radar, fill="toself", name=bairro_escolhido,
+                    line_color="#ff6e40",
+                ))
+                fig_radar.update_layout(
+                    title=f"{bairro_escolhido} vs. cidade — por aspecto",
+                    polar=dict(radialaxis=dict(visible=True)),
+                    showlegend=True, legend=dict(orientation="h", y=-0.1),
+                )
+                st.plotly_chart(fig_radar, use_container_width=True)
+
+            with col_rad2:
+                fig_delta = px.bar(
+                    delta, orientation="h",
+                    labels={"value": "Diferença em relação à média da cidade", "index": ""},
+                    title=f"{bairro_escolhido}: acima/abaixo da média (diferença absoluta)",
+                    color=delta.values, color_continuous_scale="RdYlGn", color_continuous_midpoint=0,
+                )
+                fig_delta.update_layout(showlegend=False, coloraxis_showscale=False)
+                st.plotly_chart(fig_delta, use_container_width=True)
+
+            pontos_fracos = delta[delta < -0.05].index.tolist()
+            pontos_fortes = delta[delta > 0.05].index.tolist()
+            col_pf1, col_pf2 = st.columns(2)
+            with col_pf1:
+                st.success(
+                    f"**Pontos fortes:** {', '.join(pontos_fortes) if pontos_fortes else 'nenhum destaque relevante'}"
+                )
+            with col_pf2:
+                st.warning(
+                    f"**Pontos de atenção:** {', '.join(pontos_fracos) if pontos_fracos else 'nenhum problema relevante'}"
+                )
+
+        st.divider()
+        st.markdown("##### O que mais pesa no preço e na ocupação?")
+        colunas_corr = list(subnotas_disponiveis)
+        alvo_disponivel = [c for c in ["preco", "taxa_ocupacao_estimada"] if c in df.columns]
+        if colunas_corr and alvo_disponivel:
+            corr = df[colunas_corr + alvo_disponivel].corr().loc[colunas_corr, alvo_disponivel]
+            corr.index = [subnotas_disponiveis[c] for c in colunas_corr]
+            st.dataframe(
+                corr.style.format("{:.2f}").background_gradient(cmap="RdYlGn", axis=None),
+                use_container_width=True,
+            )
+            st.caption(
+                "Correlação entre cada aspecto avaliado e preço/ocupação. Valores mais "
+                "próximos de 1 (verde) indicam que melhorar aquele aspecto tende a andar "
+                "junto com preços mais altos ou mais ocupação; próximos de -1 (vermelho), "
+                "o oposto — não implica causalidade."
+            )
     else:
         st.info(
             "O dataset de features não traz sub-notas por aspecto (limpeza, comunicação, "
@@ -1862,7 +1784,7 @@ with abas_criadas[3]:
 # ---------------------------------------------------------------------------
 # ABA 5 — RECOMENDAÇÃO POR PONTOS TURÍSTICOS
 # ---------------------------------------------------------------------------
-with abas_criadas[4]:
+with aba_recomendacao:
     st.subheader("🎯 Encontre hospedagens perto dos lugares que você quer visitar")
     st.caption(
         "Escolha um ou mais pontos turísticos e o app calcula, para cada anúncio real do "
@@ -2020,24 +1942,11 @@ with abas_criadas[4]:
 # injetado no system prompt para que a assistente também consiga responder
 # perguntas sobre os dados carregados no app.
 # ---------------------------------------------------------------------------
-with abas_criadas[5]:
-    col_logo, col_titulo_ia = st.columns([1, 6], vertical_alignment="center")
-    with col_logo:
-        if os.path.exists(LOGO_VANDER_IA):
-            st.image(LOGO_VANDER_IA, use_container_width=True)
-    with col_titulo_ia:
-        st.markdown(
-            '<div style="font-family: Georgia, serif; font-size: 1.5rem; '
-            'margin-bottom: 0.1rem;">VANDER IA <span style="font-size: 1rem; '
-            'opacity: 0.6;">1.0</span></div>'
-            '<div style="font-size: 0.8rem; color: var(--acento-azul); '
-            'text-transform: uppercase; letter-spacing: 0.05em;">'
-            "Inteligência que transforma</div>",
-            unsafe_allow_html=True,
-        )
+with aba_assistente:
+    st.subheader("🤖 Assistente IA")
     st.caption(
         "Converse livremente ou pergunte sobre os dados deste app (bairros, preços, "
-        "rentabilidade, avaliações etc.). A VANDER IA tem acesso a um resumo do dataset "
+        "rentabilidade, avaliações etc.). A assistente tem acesso a um resumo do dataset "
         "carregado, mas não aos filtros que você aplicou nas outras abas."
     )
 
@@ -2060,15 +1969,12 @@ with abas_criadas[5]:
         contexto_dados = montar_contexto_dados(df, agg)
 
         system_prompt = (
-            "Você é a VANDER IA 1.0, a assistente de IA embutida em um app Streamlit de "
-            "análise do mercado de Airbnb no Rio de Janeiro. Seu lema é 'Inteligência que "
-            "transforma'. Responda em português do Brasil, de forma direta e objetiva. Use "
-            "o resumo de dados abaixo quando a pergunta for sobre o dataset; para perguntas "
-            "gerais, responda normalmente sem forçar o contexto.\n\n"
+            "Você é a assistente de IA embutida em um app Streamlit de análise do mercado "
+            "de Airbnb no Rio de Janeiro. Responda em português do Brasil, de forma direta "
+            "e objetiva. Use o resumo de dados abaixo quando a pergunta for sobre o "
+            "dataset; para perguntas gerais, responda normalmente sem forçar o contexto.\n\n"
             f"### Resumo do dataset carregado\n{contexto_dados}"
         )
-
-        avatar_assistente = LOGO_VANDER_IA if os.path.exists(LOGO_VANDER_IA) else "🤖"
 
         if "mensagens_assistente" not in st.session_state:
             st.session_state.mensagens_assistente = []
@@ -2080,8 +1986,7 @@ with abas_criadas[5]:
                 st.rerun()
 
         for msg in st.session_state.mensagens_assistente:
-            avatar_msg = avatar_assistente if msg["role"] == "assistant" else None
-            with st.chat_message(msg["role"], avatar=avatar_msg):
+            with st.chat_message(msg["role"]):
                 st.markdown(msg["content"])
 
         pergunta = st.chat_input("Pergunte algo sobre os dados ou converse livremente...")
@@ -2090,7 +1995,7 @@ with abas_criadas[5]:
             with st.chat_message("user"):
                 st.markdown(pergunta)
 
-            with st.chat_message("assistant", avatar=avatar_assistente):
+            with st.chat_message("assistant"):
                 placeholder = st.empty()
                 resposta_completa = ""
                 try:
