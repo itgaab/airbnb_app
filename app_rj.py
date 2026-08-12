@@ -84,7 +84,7 @@ def formatar_moeda(valor, casas=2, forcar_sinal=False):
 
 
 st.set_page_config(
-    page_title="Airbnb Rio de Janeiro",
+    page_title="Airbnb - Rio de Janeiro",
     page_icon=_caminho_icone if os.path.exists(_caminho_icone) else "🏠",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -447,7 +447,7 @@ def exibir_splash_screen():
             {logo_html}
             <h1 class="splash-titulo">VANDER IA <span class="marca">1.0</span></h1>
             <p class="splash-subtitulo">
-                Airbnb Rio de Janeiro<br>
+                Airbnb - Rio de Janeiro<br>
                 Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.
             </p>
             <div class="splash-cartoes">{cartoes_nav}</div>
@@ -1183,7 +1183,7 @@ with col_titulo:
     st.markdown(
         '<div class="cabecalho-app">'
         '<div class="selo">Análise de dados · Rio de Janeiro</div>'
-        "<h1> Airbnb Rio de Janeiro</h1>"
+        "<h1> Airbnb - Rio de Janeiro</h1>"
         "<p>Preço, ocupação, luxo, turismo e sazonalidade dos anúncios por bairro.</p>"
         "</div>",
         unsafe_allow_html=True,
