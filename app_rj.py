@@ -1213,8 +1213,8 @@ with col_info:
 PAGINAS_NAV = [
     ("mapa", "🗺️ Mapa Dinâmico"),
     ("sazonalidade", "📅 Evolução Temporal dos Preços"),
-    ("simulador", "🧮 Simulador de Investimento"),
     ("avaliacoes", "📝 Análise de Avaliações"),
+    ("simulador", "🧮 Simulador de Investimento"),
     ("recomendacao", "🎯 Recomendação por Turismo"),
     ("assistente", "🤖 VANDER IA"),
 ]
@@ -1539,9 +1539,9 @@ with abas_criadas[1]:
                     st.info("Selecione pelo menos um bairro para ver o gráfico.")
 
 # ---------------------------------------------------------------------------
-# ABA 3 — SIMULADOR DE INVESTIMENTO
+# ABA 4 — SIMULADOR DE INVESTIMENTO
 # ---------------------------------------------------------------------------
-with abas_criadas[2]:
+with abas_criadas[3]:
     st.subheader("Simulador de Preço, Ocupação e Rentabilidade")
     st.caption(
         "Informe as características de um imóvel e receba uma estimativa de preço de diária, "
@@ -1861,12 +1861,12 @@ with abas_criadas[2]:
 
 
 # ---------------------------------------------------------------------------
-# ABA 4 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
+# ABA 3 — ANÁLISE DE AVALIAÇÕES (pontos fortes e fracos)
 # Página de avaliações — usa sub-notas por aspecto (limpeza, comunicação,
 # localização etc.), usamos elas; senão, caímos de volta para nota_composta e os
 # indicadores de engajamento já calculados em criar_variaveis_avaliacoes().
 # ---------------------------------------------------------------------------
-with abas_criadas[3]:
+with abas_criadas[2]:
     st.subheader("📝 Pontos fortes e fracos das hospedagens")
     st.caption(
         "Usa as sub-notas de avaliação (limpeza, comunicação, localização etc.), quando "
